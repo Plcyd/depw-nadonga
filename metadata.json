@@ -1,0 +1,6 @@
+{
+  "name": "DEPW Assist — Manila Barangay Declogging & Smart Tracker Platform",
+  "description": "Enterprise public works command center, 8-slide interactive presentation, OpenStreetMap street tracker, 3D drainage visualizer, water chemistry inspector, and AI-assisted liaison platform for the Department of Engineering and Public Works (Manila).",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,255 @@
+{
+  "entities": {
+    "Ticket": {
+      "title": "Ticket",
+      "description": "Fictional demonstration Barangay declogging or drainage service request record.",
+      "type": "object",
+      "properties": {
+        "ticketId": {
+          "type": "string",
+          "description": "Formatted ticket reference number",
+          "minLength": 5,
+          "maxLength": 32,
+          "pattern": "^DEO-202[0-9]-[0-9]{3,5}$"
+        },
+        "dateReceived": {
+          "type": "string",
+          "description": "Date request was received",
+          "minLength": 4,
+          "maxLength": 32
+        },
+        "barangay": {
+          "type": "string",
+          "description": "Fictional Barangay name",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "district": {
+          "type": "string",
+          "description": "Manila administrative district",
+          "minLength": 2,
+          "maxLength": 60
+        },
+        "legislativeDistrict": {
+          "type": "string",
+          "description": "Manila legislative district (1st to 6th District)",
+          "minLength": 2,
+          "maxLength": 40
+        },
+        "streetAddress": {
+          "type": "string",
+          "description": "Fictional street or canal location description",
+          "minLength": 2,
+          "maxLength": 200
+        },
+        "requestType": {
+          "type": "string",
+          "description": "Type of drainage work requested",
+          "enum": [
+            "Declogging",
+            "Desilting",
+            "Manhole Repair",
+            "Gutter Clearance",
+            "Drainage Inspection"
+          ],
+          "maxLength": 40
+        },
+        "status": {
+          "type": "string",
+          "description": "Current workflow stage",
+          "enum": [
+            "For Verification",
+            "Pending Evaluation",
+            "Returned for Clarification",
+            "Inspection Scheduled",
+            "Scheduled for Implementation",
+            "In Progress",
+            "Completed",
+            "Closed"
+          ],
+          "maxLength": 40
+        },
+        "actionTaken": {
+          "type": "string",
+          "description": "Most recent recorded action",
+          "minLength": 2,
+          "maxLength": 300
+        },
+        "nextStep": {
+          "type": "string",
+          "description": "Next administrative or engineering step",
+          "minLength": 2,
+          "maxLength": 300
+        },
+        "requesterName": {
+          "type": "string",
+          "description": "Fictional Barangay official name",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "requesterRole": {
+          "type": "string",
+          "description": "Fictional Barangay official title",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed request description",
+          "minLength": 5,
+          "maxLength": 1500
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Latitude coordinate in Manila"
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Longitude coordinate in Manila"
+        },
+        "coordSource": {
+          "type": "string",
+          "description": "Source of map coordinates",
+          "minLength": 2,
+          "maxLength": 60
+        },
+        "coordVerified": {
+          "type": "boolean",
+          "description": "Whether the pin location was verified"
+        },
+        "priority": {
+          "type": "string",
+          "description": "Priority classification",
+          "enum": ["Routine", "Elevated", "High Priority"],
+          "maxLength": 30
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the user who created the record",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": [
+        "ticketId",
+        "dateReceived",
+        "barangay",
+        "district",
+        "legislativeDistrict",
+        "streetAddress",
+        "requestType",
+        "status",
+        "actionTaken",
+        "nextStep",
+        "requesterName",
+        "requesterRole",
+        "description",
+        "latitude",
+        "longitude",
+        "coordSource",
+        "coordVerified",
+        "priority",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "TicketHistoryEvent": {
+      "title": "TicketHistoryEvent",
+      "description": "Audit trail entry for a ticket status transition or update.",
+      "type": "object",
+      "properties": {
+        "ticketId": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 32,
+          "pattern": "^DEO-202[0-9]-[0-9]{3,5}$"
+        },
+        "previousStatus": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40
+        },
+        "newStatus": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40
+        },
+        "actionTaken": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 300
+        },
+        "actorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "actorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ticketId",
+        "previousStatus",
+        "newStatus",
+        "actionTaken",
+        "actorUid",
+        "actorName",
+        "createdAt"
+      ]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted admin user lookup record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin"],
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/tickets/{ticketId}": {
+      "schema": "Ticket",
+      "description": "Stores fictional Barangay declogging service requests synced with user account."
+    },
+    "/tickets/{ticketId}/history/{eventId}": {
+      "schema": "TicketHistoryEvent",
+      "description": "Stores chronological status history events for a parent ticket."
+    },
+    "/admins/{adminId}": {
+      "schema": "AdminRecord",
+      "description": "Trusted collection of administrator UIDs."
+    }
+  }
+}
