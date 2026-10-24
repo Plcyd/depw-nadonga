@@ -20,9 +20,9 @@ export default function Drainage3DView({ tickets = [] }) {
 
   const activeTicket = tickets.find((t) => (t.ticketId || t.id) === selectedTicketId) || tickets[0] || {
     ticketId: 'DEO-2026-001',
-    barangay: 'Brgy 123 SAMPLE',
+    barangay: 'Barangay 123, Zone 10',
     district: 'Tondo',
-    streetAddress: 'Sample Street near Estero de Vitas',
+    streetAddress: 'R. Magsaysay St. near Estero de Vitas',
     requestType: 'Declogging',
     status: 'Pending Evaluation'
   };

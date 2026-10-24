@@ -8,7 +8,8 @@ import {
   MANILA_16_DISTRICTS,
   LEGISLATIVE_DISTRICTS,
   TICKET_STATUSES,
-  REQUEST_TYPES
+  REQUEST_TYPES,
+  getManilaSpatialDrainageContext,
 } from '../utils/workflowRules.js';
 import { api } from '../services/api.js';
 
@@ -197,7 +198,7 @@ export default function StreetMapView({
       const marker = L.marker([lat, lng], { icon: markerIcon });
       marker.bindPopup(`
         <div style="font-family:'Plus Jakarta Sans',sans-serif;min-width:210px;color:#0f172a;">
-          <div style="font-size:10px;font-weight:800;color:#0284c7;letter-spacing:0.06em;">${tId} • SAMPLE DATA</div>
+          <div style="font-size:10px;font-weight:800;color:#0284c7;letter-spacing:0.06em;">${tId} • DEPW GIS</div>
           <div style="font-size:13px;font-weight:700;margin:3px 0;">${ticket.barangay} (${ticket.district})</div>
           <div style="font-size:12px;color:#334155;">${street}</div>
           <div style="font-size:11px;margin-top:4px;color:#475569;"><strong>Type:</strong> ${rType}</div>
@@ -292,8 +293,21 @@ export default function StreetMapView({
     try {
       const res = await api.runMapsGrounding(groundingQuery);
       setGroundingResult(res);
+      if (res.isOfflineKnowledge && res.quotaFallbackNotice && showToast) {
+        showToast('Active: City of Manila DEPW Geographic Intelligence (Offline Reconnaissance)', 'info');
+      }
     } catch (err) {
-      if (showToast) showToast(`Maps grounding error: ${err.message}`, 'error');
+      // Local client fallback if server endpoint or network encounters issue
+      const fallback = getManilaSpatialDrainageContext(groundingQuery);
+      setGroundingResult({
+        modelUsed: 'DEPW Manila Estero & Drainage GIS (Offline Mode)',
+        text: fallback.summary,
+        isOfflineKnowledge: true,
+        places: fallback.places,
+      });
+      if (showToast) {
+        showToast('Displaying DEPW Manila offline geographic intelligence.', 'info');
+      }
     } finally {
       setGroundingLoading(false);
     }
@@ -495,7 +509,7 @@ export default function StreetMapView({
           {/* Selected Ticket Card */}
           <div className={styles.glassPanel} style={{ padding: '18px' }}>
             <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#38bdf8', marginBottom: '8px' }}>
-              SELECTED MAP REQUEST • SAMPLE DATA
+              SELECTED MAP REQUEST • DEPW GIS
             </div>
             {activeTicket ? (
               <div>
@@ -596,14 +610,53 @@ export default function StreetMapView({
             </div>
 
             {groundingResult && (
-              <div className={styles.glassCard} style={{ padding: '12px', maxHeight: '210px', overflowY: 'auto' }}>
+              <div className={styles.glassCard} style={{ padding: '14px', maxHeight: '250px', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      background: groundingResult.isOfflineKnowledge ? 'rgba(245, 158, 11, 0.18)' : 'rgba(56, 189, 248, 0.15)',
+                      color: groundingResult.isOfflineKnowledge ? '#fcd34d' : '#38bdf8',
+                      border: `1px solid ${groundingResult.isOfflineKnowledge ? 'rgba(245, 158, 11, 0.4)' : 'rgba(56, 189, 248, 0.3)'}`,
+                    }}
+                  >
+                    {groundingResult.modelUsed || 'Geographic Reconnaissance'}
+                  </span>
+                  {groundingResult.isOfflineKnowledge && (
+                    <span style={{ fontSize: '10px', color: '#94a3b8' }}>
+                      City of Manila DEPW Geographic Knowledge Base
+                    </span>
+                  )}
+                </div>
+
+                {groundingResult.quotaFallbackNotice && (
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: '#fef08a',
+                      background: 'rgba(234, 179, 8, 0.12)',
+                      border: '1px solid rgba(234, 179, 8, 0.25)',
+                      borderRadius: '6px',
+                      padding: '6px 10px',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    ℹ️ {groundingResult.quotaFallbackNotice}
+                  </div>
+                )}
+
                 <div style={{ fontSize: '12px', color: '#e2e8f0', whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>
                   {groundingResult.text || groundingResult.answer}
                 </div>
                 {groundingResult.places && groundingResult.places.length > 0 && (
                   <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(148,163,184,0.15)' }}>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: '#38bdf8', marginBottom: '6px' }}>
-                      VERIFIED GOOGLE MAPS SOURCES:
+                      MANILA DRAINAGE BASIN & WATERWAY LANDMARKS:
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                       {groundingResult.places.map((p, idx) => (

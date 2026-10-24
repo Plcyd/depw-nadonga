@@ -24,6 +24,7 @@ async function requestJson(url, options = {}) {
 export const api = {
   getHealth: () => requestJson('/api/health'),
   getMetrics: () => requestJson('/api/metrics'),
+  getGlobalAuditLogs: (limit = 50) => requestJson(`/api/audit-logs?limit=${limit}`),
   getTickets: (params = {}) => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
@@ -34,6 +35,7 @@ export const api = {
     return requestJson(`/api/tickets?${qs.toString()}`);
   },
   getTicketById: (ticketId) => requestJson(`/api/tickets/${encodeURIComponent(ticketId)}`),
+  getTicketAuditLogs: (ticketId) => requestJson(`/api/tickets/${encodeURIComponent(ticketId)}/audit`),
   createTicket: (payload) =>
     requestJson('/api/tickets', {
       method: 'POST',

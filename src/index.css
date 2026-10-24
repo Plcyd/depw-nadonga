@@ -1,37 +1,124 @@
 @import "tailwindcss";
 
-:root {
+:root,
+[data-theme="navy-glass"] {
   --bg-navy-deep: #060d1f;
   --bg-navy-mid: #0a1633;
-  --bg-navy-elevated: rgba(15, 31, 68, 0.72);
-  --glass-surface: rgba(16, 34, 74, 0.62);
-  --glass-surface-hover: rgba(24, 49, 102, 0.76);
-  --glass-border: rgba(125, 211, 252, 0.22);
-  --glass-highlight: rgba(255, 255, 255, 0.12);
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --accent-cyan: #06b6d4;
+  --bg-navy-elevated: rgba(15, 31, 68, 0.82);
+  --glass-surface: rgba(16, 34, 74, 0.75);
+  --glass-surface-hover: rgba(24, 49, 102, 0.88);
+  --glass-border: rgba(125, 211, 252, 0.32);
+  --glass-highlight: rgba(255, 255, 255, 0.18);
+  --text-primary: #ffffff;
+  --text-secondary: #e2e8f0;
+  --text-muted: #cbd5e1;
+  --accent-cyan: #38bdf8;
   --accent-royal: #2563eb;
   --accent-orange: #f97316;
   --status-emerald: #10b981;
   --status-amber: #f59e0b;
   --status-rose: #f43f5e;
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-[data-theme="light"] {
+[data-theme="daylight-civic"] {
   --bg-navy-deep: #f1f5f9;
   --bg-navy-mid: #e2e8f0;
-  --bg-navy-elevated: rgba(255, 255, 255, 0.88);
-  --glass-surface: rgba(255, 255, 255, 0.82);
-  --glass-surface-hover: rgba(248, 250, 252, 0.95);
-  --glass-border: rgba(15, 23, 42, 0.14);
-  --glass-highlight: rgba(255, 255, 255, 0.9);
+  --bg-navy-elevated: rgba(255, 255, 255, 0.92);
+  --glass-surface: rgba(255, 255, 255, 0.85);
+  --glass-surface-hover: rgba(255, 255, 255, 0.98);
+  --glass-border: rgba(148, 163, 184, 0.45);
+  --glass-highlight: rgba(255, 255, 255, 0.95);
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
+  --accent-cyan: #0284c7;
+  --accent-royal: #1d4ed8;
+  --status-emerald: #059669;
+  --status-amber: #d97706;
+  --status-rose: #e11d48;
+}
+
+[data-theme="light-sky"] {
+  --bg-navy-deep: #e0f2fe;
+  --bg-navy-mid: #bae6fd;
+  --bg-navy-elevated: rgba(255, 255, 255, 0.94);
+  --glass-surface: rgba(240, 249, 255, 0.88);
+  --glass-surface-hover: rgba(255, 255, 255, 0.98);
+  --glass-border: rgba(56, 189, 248, 0.52);
+  --glass-highlight: rgba(255, 255, 255, 0.95);
+  --text-primary: #082f49;
+  --text-secondary: #0369a1;
+  --text-muted: #0284c7;
+  --accent-cyan: #0284c7;
+  --accent-royal: #0369a1;
+  --status-emerald: #059669;
+  --status-amber: #d97706;
+  --status-rose: #e11d48;
+}
+
+[data-theme="light-emerald"] {
+  --bg-navy-deep: #ecfdf5;
+  --bg-navy-mid: #d1fae5;
+  --bg-navy-elevated: rgba(255, 255, 255, 0.94);
+  --glass-surface: rgba(240, 253, 244, 0.88);
+  --glass-surface-hover: rgba(255, 255, 255, 0.98);
+  --glass-border: rgba(52, 211, 153, 0.52);
+  --glass-highlight: rgba(255, 255, 255, 0.95);
+  --text-primary: #064e3b;
+  --text-secondary: #047857;
+  --text-muted: #059669;
+  --accent-cyan: #059669;
+  --accent-royal: #047857;
+  --status-emerald: #059669;
+  --status-amber: #d97706;
+  --status-rose: #e11d48;
+}
+
+[data-theme="emerald-hydro"] {
+  --bg-navy-deep: #041d1b;
+  --bg-navy-mid: #08332e;
+  --bg-navy-elevated: rgba(10, 56, 50, 0.76);
+  --glass-surface: rgba(9, 50, 45, 0.68);
+  --glass-surface-hover: rgba(14, 71, 64, 0.82);
+  --glass-border: rgba(52, 211, 153, 0.3);
+  --glass-highlight: rgba(167, 243, 208, 0.16);
+  --text-primary: #f0fdf4;
+  --text-secondary: #ccfbf1;
+  --text-muted: #99f6e4;
+  --accent-cyan: #10b981;
+  --accent-royal: #059669;
+}
+
+[data-theme="amber-ops"] {
+  --bg-navy-deep: #181109;
+  --bg-navy-mid: #291d0e;
+  --bg-navy-elevated: rgba(54, 37, 17, 0.78);
+  --glass-surface: rgba(45, 31, 15, 0.72);
+  --glass-surface-hover: rgba(66, 45, 22, 0.85);
+  --glass-border: rgba(251, 191, 36, 0.32);
+  --glass-highlight: rgba(254, 243, 199, 0.15);
+  --text-primary: #fffbeb;
+  --text-secondary: #fde68a;
+  --text-muted: #fcd34d;
+  --accent-cyan: #f59e0b;
+  --accent-royal: #ea580c;
+}
+
+[data-theme="royal-violet"] {
+  --bg-navy-deep: #0e0924;
+  --bg-navy-mid: #1a1142;
+  --bg-navy-elevated: rgba(36, 23, 84, 0.75);
+  --glass-surface: rgba(31, 19, 74, 0.68);
+  --glass-surface-hover: rgba(46, 29, 107, 0.82);
+  --glass-border: rgba(167, 139, 250, 0.32);
+  --glass-highlight: rgba(221, 214, 254, 0.16);
+  --text-primary: #f5f3ff;
+  --text-secondary: #ddd6fe;
+  --text-muted: #c4b5fd;
+  --accent-cyan: #a855f7;
+  --accent-royal: #6366f1;
 }
 
 * {
@@ -42,10 +129,73 @@ html, body {
   margin: 0;
   padding: 0;
   font-family: var(--font-sans);
-  background: radial-gradient(circle at 15% 15%, #0f295c 0%, #07122b 52%, #040917 100%);
+  background: linear-gradient(180deg, var(--bg-navy-deep) 0%, var(--bg-navy-mid) 100%);
   color: var(--text-primary);
   min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Accessibility: Text Scaling Modes */
+html[data-text-scale="normal"] {
+  font-size: 100%;
+}
+
+html[data-text-scale="medium"] {
+  font-size: 108%;
+}
+
+html[data-text-scale="large"] {
+  font-size: 115%;
+}
+
+html[data-text-scale="extra-large"] {
+  font-size: 125%;
+}
+
+/* Accessibility: Reduced Motion */
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Accessibility: High Contrast Mode */
+html[data-contrast="high"] {
+  --glass-border: rgba(56, 189, 248, 0.7);
+  --text-primary: #ffffff;
+  --text-secondary: #f8fafc;
+  --text-muted: #e2e8f0;
+  --glass-surface: rgba(4, 12, 30, 0.94);
+  --glass-surface-hover: rgba(12, 28, 64, 0.98);
+  --bg-navy-elevated: rgba(10, 24, 56, 0.96);
+  --glass-highlight: rgba(255, 255, 255, 0.3);
+}
+
+html[data-contrast="high"] [data-theme="daylight-civic"],
+html[data-contrast="high"] [data-theme="light-sky"],
+html[data-contrast="high"] [data-theme="light-emerald"] {
+  --text-primary: #000000;
+  --text-secondary: #0f172a;
+  --text-muted: #1e293b;
+  --glass-border: rgba(15, 23, 42, 0.7);
+}
+
+/* Visible Keyboard Focus Ring */
+:focus-visible {
+  outline: 2px solid var(--accent-cyan) !important;
+  outline-offset: 2px !important;
+}
+
+/* Ensure clean text wrapping and typography clarity */
+p, span, div, td, th {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .tabular-nums {

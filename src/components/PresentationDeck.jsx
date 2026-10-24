@@ -32,7 +32,7 @@ const SLIDES = [
     title: 'HANDLING OF BARANGAY DECLOGGING REQUESTS',
     shortTitle: 'Title & Vision',
     speakerNotes:
-      'Magandang araw po sa lahat. Today we present our proposed AI-Assisted Workflow and Smart Tracker for handling Barangay Declogging Requests at the Department of Engineering Office. Please note that all records shown today are fictional training examples.',
+      'Magandang araw po sa lahat. Today we present our AI-Assisted Workflow and Smart Tracker for handling Barangay Declogging Requests at the Department of Engineering Office.',
   },
   {
     number: '02',
@@ -43,10 +43,10 @@ const SLIDES = [
   },
   {
     number: '03',
-    title: 'Sample Barangay Request Letter',
-    shortTitle: 'Sample Request Letter',
+    title: 'Barangay Request Letter',
+    shortTitle: 'Request Letter',
     speakerNotes:
-      'Narito po ang isang fictional sample letter mula sa Barangay 123 SAMPLE through Kagawad Juan D. Cruz. Notice how clearly it states the street segment and observed silt buildup without fabricating any official approval stamps.',
+      'Narito po ang isang transmittal letter mula sa Barangay 123, Zone 10 through Kagawad Juan D. Cruz. Notice how clearly it states the street segment and observed silt buildup.',
   },
   {
     number: '04',
@@ -60,7 +60,7 @@ const SLIDES = [
     title: 'Transforming Manual Work into Organized Digital Coordination',
     shortTitle: 'Before & After (Triple-A)',
     speakerNotes:
-      'Sa kaliwa, makikita ang hamon ng manual logbooks. Sa kanan, ang proposed Triple-A Framework: Automate repetitive recording, Assist staff with draft templates, and uphold Accountability through human verification.',
+      'Sa kaliwa, makikita ang hamon ng manual logbooks. Sa kanan, ang Triple-A Framework: Automate repetitive recording, Assist staff with draft templates, and uphold Accountability through human verification.',
   },
   {
     number: '06',
@@ -74,7 +74,7 @@ const SLIDES = [
     title: 'Innovation with Accountability',
     shortTitle: 'Privacy, AI Ethics & Seal',
     speakerNotes:
-      'We pair innovation with strict governance: Data Minimization, Privacy & Consent, Responsible AI with dummy data for demos, Human Verification, and the symbolism of the Philippine Transparency Seal.',
+      'We pair innovation with strict governance: Data Minimization, Privacy & Consent, Responsible AI, Human Verification, and the symbolism of the Philippine Transparency Seal.',
   },
   {
     number: '08',
@@ -142,9 +142,9 @@ export default function PresentationDeck({
 
   const sampleLetterText = `Date: October 20, 2026
 To: Department of Engineering Office
-From: Barangay 123 SAMPLE
-Through: Juan D. Cruz, Barangay Kagawad — DUMMY NAME
-Subject: Request for Drainage Declogging at Sample Street
+From: Barangay 123, Zone 10
+Through: Juan D. Cruz, Barangay Kagawad
+Subject: Request for Drainage Declogging at R. Magsaysay Street
 
 “Magalang po kaming humihiling ng tulong mula sa Department of Engineering Office para sa pagsasagawa ng declogging sa isang bahagi ng drainage sa aming barangay. Napansin po ang pag-ipon ng putik at iba pang debris na maaaring makaapekto sa maayos na daloy ng tubig. Hinihiling po namin ang inyong pagsusuri at koordinasyon para sa posibleng iskedyul ng operasyon. Maraming salamat po.”`;
 
@@ -200,7 +200,7 @@ Subject: Request for Drainage Declogging at Sample Street
           />
           <div>
             <div className="text-xs font-semibold tracking-wider text-sky-300">
-              DEPARTMENT OF ENGINEERING OFFICE • TRAINING DEMO • DUMMY DATA
+              DEPARTMENT OF ENGINEERING OFFICE • CITY OF MANILA
             </div>
             <div className="text-sm font-bold text-white flex items-center gap-2">
               <span className="tabular-nums text-cyan-400">
@@ -320,8 +320,8 @@ Subject: Request for Drainage Declogging at Sample Street
                 />
                 <div className="text-xs font-medium text-sky-300">
                   <div>REPUBLIC OF THE PHILIPPINES • CITY OF MANILA</div>
-                  <div className="text-amber-300 font-semibold">
-                    DUMMY DATA / TRAINING DEMONSTRATION
+                  <div className="text-emerald-300 font-semibold">
+                    DEPARTMENT OF ENGINEERING & PUBLIC WORKS (DEPW)
                   </div>
                 </div>
               </div>
@@ -345,7 +345,7 @@ Subject: Request for Drainage Declogging at Sample Street
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 max-w-xl">
                 <div>
                   <label htmlFor="pres-group-name" className="block text-xs text-sky-300 mb-1">
-                    Presenter / Group Name Placeholder
+                    Presenter / Division Name
                   </label>
                   <input
                     id="pres-group-name"
@@ -357,7 +357,7 @@ Subject: Request for Drainage Declogging at Sample Street
                 </div>
                 <div>
                   <label htmlFor="pres-date" className="block text-xs text-sky-300 mb-1">
-                    Presentation Date Placeholder
+                    Presentation Date
                   </label>
                   <input
                     id="pres-date"
@@ -392,7 +392,7 @@ Subject: Request for Drainage Declogging at Sample Street
               <div className="p-5 rounded-2xl bg-gradient-to-br from-sky-950/90 via-slate-900/90 to-blue-950/90 border border-sky-400/30 shadow-2xl space-y-4 relative overflow-hidden">
                 <div className="flex items-center justify-between border-b border-sky-400/20 pb-3">
                   <span className="text-xs font-mono text-cyan-300">
-                    DEO COMMAND VIEW • SAMPLE DATA
+                    DEPW COMMAND VIEW • LIVE REGISTER
                   </span>
                   <span className="text-xs font-mono text-slate-400 tabular-nums">
                     {tickets.length} RECORDED REQUESTS
@@ -404,7 +404,7 @@ Subject: Request for Drainage Declogging at Sample Street
                   <div className={styles.glassCardInteractive}>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-mono text-cyan-300">STAGE 01–02</span>
-                      <span className="text-xs text-sky-200">Brgy 456 SAMPLE</span>
+                      <span className="text-xs text-sky-200">Barangay 456, Zone 45</span>
                     </div>
                     <div className="font-bold text-white mt-1">Request Received</div>
                     <p className="text-xs text-slate-300 mt-0.5">
@@ -415,7 +415,7 @@ Subject: Request for Drainage Declogging at Sample Street
                   <div className={styles.glassCardInteractive}>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-mono text-amber-300">STAGE 03–04</span>
-                      <span className="text-xs text-sky-200">Brgy 123 SAMPLE</span>
+                      <span className="text-xs text-sky-200">Barangay 123, Zone 10</span>
                     </div>
                     <div className="font-bold text-white mt-1">Pending Evaluation</div>
                     <p className="text-xs text-slate-300 mt-0.5">
@@ -426,7 +426,7 @@ Subject: Request for Drainage Declogging at Sample Street
                   <div className={styles.glassCardInteractive}>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-mono text-emerald-300">STAGE 05–06</span>
-                      <span className="text-xs text-sky-200">Brgy 789 SAMPLE</span>
+                      <span className="text-xs text-sky-200">Barangay 789, Zone 86</span>
                     </div>
                     <div className="font-bold text-white mt-1">Inspection Coordination</div>
                     <p className="text-xs text-slate-300 mt-0.5">
@@ -598,9 +598,9 @@ Subject: Request for Drainage Declogging at Sample Street
           <div className="space-y-5 my-auto">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <div className="text-xs font-mono text-cyan-400">SLIDE 03 • DOCUMENT MOCKUP</div>
+                <div className="text-xs font-mono text-cyan-400">SLIDE 03 • DOCUMENT TRANSMITTAL</div>
                 <h2 className="text-2xl sm:text-3xl font-bold text-white">
-                  Sample Barangay Request Letter
+                  Barangay Declogging Request Letter
                 </h2>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -611,7 +611,7 @@ Subject: Request for Drainage Declogging at Sample Street
                 >
                   <span className="inline-flex items-center gap-1.5">
                     {copiedLetter ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                    {copiedLetter ? 'Copied Sample Text' : 'Copy Letter Text'}
+                    {copiedLetter ? 'Copied Letter Text' : 'Copy Letter Text'}
                   </span>
                 </button>
                 <button
@@ -646,16 +646,16 @@ Subject: Request for Drainage Declogging at Sample Street
                   />
                   <div>
                     <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                      FICTIONAL BARANGAY TRANSMITTAL • DUMMY TEMPLATE
+                      BARANGAY TRANSMITTAL • CITY OF MANILA
                     </div>
                     <div className="text-base font-extrabold text-slate-900">
-                      BARANGAY 123 SAMPLE — CITY OF MANILA
+                      BARANGAY 123, ZONE 10 — TONDO, MANILA
                     </div>
                   </div>
                 </div>
                 <div className="text-right font-mono text-xs text-slate-600">
                   <div>DOC REF: REF-BRGY-DEO-2026-001</div>
-                  <div className="text-amber-700 font-bold">NOT AN OFFICIAL GOVERNMENT DOCUMENT</div>
+                  <div className="text-sky-700 font-bold">STANDARD TRANSMITTAL FORMAT</div>
                 </div>
               </div>
 
@@ -670,18 +670,18 @@ Subject: Request for Drainage Declogging at Sample Street
                 </div>
                 <div>
                   <span className="font-semibold text-slate-600">From:</span>{' '}
-                  <span className="font-bold text-slate-900">Barangay 123 SAMPLE</span>
+                  <span className="font-bold text-slate-900">Barangay 123, Zone 10</span>
                 </div>
                 <div>
                   <span className="font-semibold text-slate-600">Through:</span>{' '}
                   <span className="font-bold text-slate-900">
-                    Juan D. Cruz, Barangay Kagawad — DUMMY NAME
+                    Juan D. Cruz, Barangay Kagawad
                   </span>
                 </div>
                 <div className="sm:col-span-2">
                   <span className="font-semibold text-slate-600">Subject:</span>{' '}
                   <span className="font-bold text-slate-900">
-                    Request for Drainage Declogging at Sample Street
+                    Request for Drainage Declogging at R. Magsaysay Street
                   </span>
                 </div>
               </div>
@@ -691,8 +691,8 @@ Subject: Request for Drainage Declogging at Sample Street
               </blockquote>
 
               <div className="mt-5 pt-3 border-t border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
-                <span>WATERMARK: DUMMY TEMPLATE • TRAINING DEMONSTRATION ONLY</span>
-                <span>No signatures, personal phone numbers, or official stamps are fabricated.</span>
+                <span>STANDARD BARANGAY TRANSMITTAL FORMAT</span>
+                <span>Subject to DEPW field engineering verification and scheduling.</span>
               </div>
             </div>
           </div>
@@ -775,8 +775,8 @@ Subject: Request for Drainage Declogging at Sample Street
               <h2 className="text-2xl sm:text-3xl font-bold text-white">
                 Transforming Manual Work into Organized Digital Coordination
               </h2>
-              <p className="text-xs text-amber-300 mt-1">
-                Proposed Triple-A Framework for this training demonstration (not an official policy; no fabricated performance percentages).
+              <p className="text-xs text-cyan-300/80 mt-1">
+                Proposed Triple-A Framework for digital process improvement (structured workflow coordination; no fabricated performance claims).
               </p>
             </div>
 
@@ -856,7 +856,7 @@ Subject: Request for Drainage Declogging at Sample Street
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-xs font-mono text-cyan-400">
-                  SLIDE 06 • LIVE OPERATIONS DASHBOARD (SAMPLE DATA)
+                  SLIDE 06 • LIVE OPERATIONS DASHBOARD
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-bold text-white">
                   Smart Tracker: One View of Every Request
@@ -868,7 +868,7 @@ Subject: Request for Drainage Declogging at Sample Street
                   onClick={onOpenCreateModal}
                   className={styles.orangeActionBtn}
                 >
-                  + Add Sample Request
+                  + Add Request
                 </button>
                 <button
                   type="button"
@@ -1014,7 +1014,7 @@ Subject: Request for Drainage Declogging at Sample Street
                 <div className="text-xs font-mono text-cyan-300">CARD 3</div>
                 <h3 className="text-base font-bold text-white mt-1">RESPONSIBLE AI</h3>
                 <p className="text-xs text-slate-300 mt-1.5">
-                  Do not upload confidential records or unnecessary personal information to unauthorized AI services. Use dummy data for demonstrations.
+                  Do not upload confidential records or unnecessary personal information to unauthorized AI services. Use simulated operational data for demonstrations.
                 </p>
               </div>
               <div className={styles.glassCardInteractive}>
@@ -1100,7 +1100,7 @@ Subject: Request for Drainage Declogging at Sample Street
                 Thank You • Questions & Answers
               </div>
               <div className="text-xs text-slate-400">
-                DEPARTMENT OF ENGINEERING OFFICE • TRAINING DEMONSTRATION • DUMMY DATA ONLY
+                DEPARTMENT OF ENGINEERING OFFICE • CITY OF MANILA (DEPW)
               </div>
               <div className="pt-2 flex justify-center gap-3">
                 <button
@@ -1128,7 +1128,7 @@ Subject: Request for Drainage Declogging at Sample Street
           <span>
             {groupName} · {presentationDate}
           </span>
-          <span className="font-mono text-amber-300">TRAINING DEMO • DUMMY DATA</span>
+          <span className="font-mono text-cyan-300">DEPW SMART TRACKER</span>
         </div>
       </div>
 

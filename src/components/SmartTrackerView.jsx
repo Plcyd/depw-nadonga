@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Search,
   Download,
   Plus,
   RotateCcw,
   MapPin,
   CheckCircle2,
   AlertTriangle,
-  Clock,
   Trash2,
   ArrowUpDown,
   Columns,
   Table,
   Calendar,
   FileText,
+  History,
+  Edit3,
+  Layers,
+  RefreshCw,
 } from 'lucide-react';
 import styles from '../styles/GlassSystem.module.css';
 import {
@@ -30,6 +32,7 @@ import {
   calculateTicketAge,
   calculateDashboardMetrics,
   ticketsToCsv,
+  getWhatShouldIDoNext,
 } from '../utils/workflowRules.js';
 import { api } from '../services/api.js';
 import {
@@ -44,10 +47,24 @@ export default function SmartTrackerView({
   onOpenLetterStudioWithTicket,
   initialOpenCreate = false,
   onCloseInitialCreate,
+  focusedTicketId,
+  initialInspectorTab,
+  initialStatusFilter,
+  onOpenJourneyReplay,
 }) {
   const [subTab, setSubTab] = useState('table'); // 'table' | 'kanban' | 'schedule' | 'quality'
+  const [inspectorTab, setInspectorTab] = useState(initialInspectorTab || 'overview'); // 'overview' | 'audit' | 'edit'
+  const [auditTypeFilter, setAuditTypeFilter] = useState('ALL');
+  const [auditSortOrder, setAuditSortOrder] = useState('desc');
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState(initialStatusFilter || 'ALL');
+
+  useEffect(() => {
+    if (initialStatusFilter && initialStatusFilter !== 'ALL') {
+      setStatusFilter(initialStatusFilter);
+    }
+  }, [initialStatusFilter]);
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [districtFilter, setDistrictFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('ticketId');
@@ -55,7 +72,7 @@ export default function SmartTrackerView({
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [selectedTicketId, setSelectedTicketId] = useState('DEO-2026-001');
+  const [selectedTicketId, setSelectedTicketId] = useState(focusedTicketId || 'DEO-2026-001');
   const [ticketDetail, setTicketDetail] = useState(null);
   const [ticketHistory, setTicketHistory] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -72,25 +89,25 @@ export default function SmartTrackerView({
     scheduledDate: '2026-10-27',
     scheduleType: 'Site Inspection',
     confirmationStatus: 'Proposed (Awaiting Confirmation)',
-    assignedUnit: 'DEO Field Assessment Team A',
+    assignedUnit: 'DEPW Field Assessment Team A',
     notes: '',
   });
 
   // Create Ticket Form State
   const [createForm, setCreateForm] = useState({
-    barangay: 'Brgy 250 SAMPLE',
+    barangay: 'Barangay 250, Zone 23',
     district: 'Tondo',
     legislativeDistrict: '2nd District',
-    streetAddress: 'Sample Juan Luna Canal Segment (DUMMY)',
+    streetAddress: 'Juan Luna St. Canal Segment near Tayuman',
     requestType: 'Declogging',
     priority: 'Elevated',
     requesterName: 'Pedro R. Dela Cruz',
-    requesterRole: 'Barangay Kagawad — DUMMY NAME',
+    requesterRole: 'Barangay Kagawad',
     description:
-      'Fictional training entry: Requesting declogging of silted storm drain and lateral gutter along Sample Street.',
+      'Requesting declogging of silted storm drain and lateral gutter along Juan Luna Street.',
     latitude: 14.6195,
     longitude: 120.9678,
-    coordSource: 'User-Selected Demo Pin',
+    coordSource: 'Verified Street Pin',
     coordVerified: true,
   });
   const [formErrors, setFormErrors] = useState({});
@@ -101,8 +118,38 @@ export default function SmartTrackerView({
     newStatus: 'Inspection Scheduled',
     actionTaken: 'Inspection coordination initiated with Barangay official',
     nextStep: 'Conduct joint ocular assessment',
-    actorName: 'Authorized DEO Liaison Officer (Demo)',
+    actorName: 'Authorized DEPW Liaison Officer',
   });
+
+  // Ticket Details Edit Form State
+  const [editForm, setEditForm] = useState({
+    barangay: '',
+    district: 'Tondo',
+    legislativeDistrict: '1st District',
+    streetAddress: '',
+    requestType: 'Declogging',
+    priority: 'Routine',
+    requesterName: '',
+    requesterRole: 'Barangay Kagawad',
+    description: '',
+    coordVerified: true,
+    actorName: 'Engr. R. Villanueva (DEPW Field Review)',
+    actorRole: 'Area Engineering Supervisor',
+  });
+  const [editSaving, setEditSaving] = useState(false);
+
+  useEffect(() => {
+    if (focusedTicketId) {
+      setSelectedTicketId(focusedTicketId);
+      setSubTab('table');
+    }
+  }, [focusedTicketId]);
+
+  useEffect(() => {
+    if (initialInspectorTab) {
+      setInspectorTab(initialInspectorTab);
+    }
+  }, [initialInspectorTab]);
 
   useEffect(() => {
     if (initialOpenCreate) {
@@ -123,7 +170,7 @@ export default function SmartTrackerView({
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Load selected ticket detail + history
+  // Load selected ticket detail + server-side audit history
   useEffect(() => {
     if (!selectedTicketId) return;
     let active = true;
@@ -131,7 +178,7 @@ export default function SmartTrackerView({
     api
       .getTicketById(selectedTicketId)
       .then((res) => {
-        if (!active) return;
+        if (!active || !res.ticket) return;
         setTicketDetail(res.ticket);
         setTicketHistory(res.history || []);
         const explain = getExplainableNextStep(res.ticket.status);
@@ -142,6 +189,20 @@ export default function SmartTrackerView({
           actionTaken: explain.suggestedActionTaken,
           nextStep: explain.suggestedNextStep,
         }));
+        setEditForm({
+          barangay: res.ticket.barangay || '',
+          district: res.ticket.district || 'Tondo',
+          legislativeDistrict: res.ticket.legislativeDistrict || '1st District',
+          streetAddress: res.ticket.streetAddress || '',
+          requestType: res.ticket.requestType || 'Declogging',
+          priority: res.ticket.priority || 'Routine',
+          requesterName: res.ticket.requesterName || '',
+          requesterRole: res.ticket.requesterRole || 'Barangay Kagawad',
+          description: res.ticket.description || '',
+          coordVerified: Boolean(res.ticket.coordVerified),
+          actorName: 'Engr. R. Villanueva (DEPW Field Review)',
+          actorRole: 'Area Engineering Supervisor',
+        });
       })
       .catch(() => {})
       .finally(() => {
@@ -151,6 +212,34 @@ export default function SmartTrackerView({
       active = false;
     };
   }, [selectedTicketId, tickets]);
+
+  const handleRefreshAuditLog = async () => {
+    if (!ticketDetail) return;
+    try {
+      const res = await api.getTicketAuditLogs(ticketDetail.ticketId);
+      if (Array.isArray(res.auditLogs)) {
+        setTicketHistory(res.auditLogs);
+        showToast('success', `Synced ${res.auditLogs.length} audit log entries from server.`);
+      }
+    } catch (err) {
+      showToast('error', 'Failed to refresh server audit log.');
+    }
+  };
+
+  const filteredAuditHistory = useMemo(() => {
+    const list = ticketHistory.filter((ev) => {
+      if (auditTypeFilter === 'ALL') return true;
+      return (ev.eventType || 'STATUS_TRANSITION') === auditTypeFilter;
+    });
+    return [...list].sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime() || 0;
+      const timeB = new Date(b.timestamp).getTime() || 0;
+      if (timeA !== timeB) {
+        return auditSortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+      }
+      return auditSortOrder === 'desc' ? (b.id || 0) - (a.id || 0) : (a.id || 0) - (b.id || 0);
+    });
+  }, [ticketHistory, auditTypeFilter, auditSortOrder]);
 
   const metrics = useMemo(() => calculateDashboardMetrics(tickets), [tickets]);
 
@@ -244,7 +333,7 @@ export default function SmartTrackerView({
         await onRefreshTickets();
         setSelectedTicketId(res.ticket.ticketId);
         setShowCreateModal(false);
-        showToast('success', `Created fictional ticket ${res.ticket.ticketId} in Smart Tracker.`);
+        showToast('success', `Created ticket ${res.ticket.ticketId} in Smart Tracker.`);
       }
     } catch (err) {
       showToast('error', err instanceof Error ? err.message : 'Failed to create ticket.');
@@ -279,11 +368,37 @@ export default function SmartTrackerView({
         await onRefreshTickets();
         showToast(
           'success',
-          `Updated ${res.ticket.ticketId} status to "${res.ticket.status}".`
+          `Updated ${res.ticket.ticketId} status to "${res.ticket.status}" and logged audit event.`
         );
       }
     } catch (err) {
       showToast('error', err instanceof Error ? err.message : 'Status update failed.');
+    }
+  };
+
+  const handleSaveTicketEdits = async (e) => {
+    e.preventDefault();
+    if (!ticketDetail) return;
+    setEditSaving(true);
+    try {
+      const res = await api.updateTicket(ticketDetail.ticketId, {
+        ...editForm,
+      });
+      if (res.ticket) {
+        await syncTicketToFirestore(res.ticket).catch(() => {});
+        setTicketDetail(res.ticket);
+        setTicketHistory(res.history || []);
+        await onRefreshTickets();
+        setInspectorTab('audit');
+        showToast(
+          'success',
+          `Saved edits for ${res.ticket.ticketId} and recorded field diff in Audit Log.`
+        );
+      }
+    } catch (err) {
+      showToast('error', err instanceof Error ? err.message : 'Failed to update ticket details.');
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -299,10 +414,12 @@ export default function SmartTrackerView({
       const res = await api.updateTicket(ticketDetail.ticketId, {
         inspectionChecklist: currentList,
         actionTaken: `Updated inspection checklist item: "${currentList[idx].item}"`,
+        actorName: editForm.actorName || 'Authorized DEPW Inspector',
       });
       setTicketDetail(res.ticket);
       setTicketHistory(res.history || []);
       await onRefreshTickets();
+      showToast('success', `Checklist updated & recorded in server audit log.`);
     } catch (err) {
       showToast('error', 'Failed to update checklist item.');
     }
@@ -318,7 +435,7 @@ export default function SmartTrackerView({
         const remaining = tickets.filter((t) => t.ticketId !== confirmDeleteTicketId);
         setSelectedTicketId(remaining[0]?.ticketId || '');
       }
-      showToast('success', `Deleted sample ticket ${confirmDeleteTicketId}.`);
+      showToast('success', `Deleted ticket ${confirmDeleteTicketId}.`);
     } catch (err) {
       showToast('error', err instanceof Error ? err.message : 'Delete failed.');
     }
@@ -330,12 +447,12 @@ export default function SmartTrackerView({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `depw-smart-tracker-sample-${Date.now()}.csv`);
+    link.setAttribute('download', `depw-smart-tracker-${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    showToast('success', `Exported ${filteredTickets.length} filtered records to CSV.`);
+    showToast('success', `Exported ${filteredTickets.length} records to CSV.`);
   };
 
   const handleCreateSchedule = async (e) => {
@@ -348,7 +465,7 @@ export default function SmartTrackerView({
       const res = await api.createScheduleEvent(newScheduleForm);
       setOperationsData((prev) => ({ ...prev, schedules: res.schedules || prev.schedules }));
       setNewScheduleForm((prev) => ({ ...prev, title: '', notes: '' }));
-      showToast('success', 'Added proposed coordination schedule entry.');
+      showToast('success', 'Added coordination schedule entry.');
     } catch (err) {
       showToast('error', err instanceof Error ? err.message : 'Failed to add schedule.');
     }
@@ -381,7 +498,7 @@ export default function SmartTrackerView({
         <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
           <div>
             <div className="text-xs font-mono text-cyan-400">
-              SMART TRACKER • PERSISTENT SQLITE + FIRESTORE REGISTER • SAMPLE DATA
+              SMART TRACKER • PERSISTENT SQLITE + FIRESTORE REGISTER • SERVER-SIDE AUDIT TRAIL
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white">
               Smart Tracker: One View of Every Request
@@ -409,12 +526,12 @@ export default function SmartTrackerView({
           </div>
         </div>
 
-        {/* 5 Required Top Metric Cards */}
+        {/* 5 Top Metric Cards */}
         <div className={styles.metricGrid}>
           <div className={styles.metricTile}>
             <div className="text-xs font-mono text-slate-300">TOTAL REQUESTS</div>
             <div className={styles.metricValue}>{metrics.totalRequests}</div>
-            <div className="text-xs text-slate-400 mt-1">Persisted Demo Records</div>
+            <div className="text-xs text-slate-400 mt-1">Active Register Records</div>
           </div>
           <div className={styles.metricTile}>
             <div className="text-xs font-mono text-amber-300">PENDING VERIFICATION</div>
@@ -424,7 +541,7 @@ export default function SmartTrackerView({
           <div className={styles.metricTile}>
             <div className="text-xs font-mono text-sky-300">PENDING EVALUATION</div>
             <div className={styles.metricValue}>{metrics.pendingEvaluation}</div>
-            <div className="text-xs text-slate-400 mt-1">Endorsed to DEO Team</div>
+            <div className="text-xs text-slate-400 mt-1">Endorsed to DEPW Team</div>
           </div>
           <div className={styles.metricTile}>
             <div className="text-xs font-mono text-cyan-300">INSPECTION SCHEDULED</div>
@@ -480,7 +597,7 @@ export default function SmartTrackerView({
           </div>
 
           <div className="flex items-center gap-2 text-xs text-slate-300">
-            <label htmlFor="sla-days-input">Demo Aging Threshold (Days):</label>
+            <label htmlFor="sla-days-input">SLA Aging Threshold (Days):</label>
             <input
               id="sla-days-input"
               type="number"
@@ -494,7 +611,7 @@ export default function SmartTrackerView({
         </div>
       </div>
 
-      {/* VIEW 1: REGISTER TABLE & DETAILED INSPECTOR */}
+      {/* VIEW 1: REGISTER TABLE & DETAILED INSPECTOR WITH DEDICATED AUDIT LOG TAB */}
       {subTab === 'table' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left 7 Cols: Search, Filters & Request Table */}
@@ -609,7 +726,7 @@ export default function SmartTrackerView({
               <div className="p-8 text-center rounded-xl bg-slate-900/60 border border-sky-400/15 space-y-3">
                 <div className="text-base font-bold text-white">No Matching Requests Found</div>
                 <p className="text-xs text-slate-300">
-                  No demonstration tickets match your current search or filter criteria.
+                  No tickets match your current search or filter criteria.
                 </p>
                 <button
                   type="button"
@@ -665,36 +782,38 @@ export default function SmartTrackerView({
                   <tbody>
                     {paginatedTickets.map((t) => {
                       const isSelected = t.ticketId === selectedTicketId;
-                      const age = calculateTicketAge(t.createdAt, new Date('2026-10-23T00:00:00Z'), slaThresholdDays);
+                      const age = calculateTicketAge(
+                        t.createdAt,
+                        new Date('2026-10-23T00:00:00Z'),
+                        slaThresholdDays
+                      );
                       return (
                         <tr
                           key={t.ticketId}
                           onClick={() => setSelectedTicketId(t.ticketId)}
-                          className={`cursor-pointer ${
-                            isSelected ? 'bg-sky-500/20' : ''
-                          }`}
+                          className={`cursor-pointer ${isSelected ? 'bg-sky-500/20' : ''}`}
                         >
-                          <td className="tabular-nums whitespace-nowrap">{t.dateReceived}</td>
-                          <td className="tabular-nums font-bold text-cyan-300 whitespace-nowrap">
+                          <td className="tabular-nums whitespace-nowrap text-sm text-slate-200">{t.dateReceived}</td>
+                          <td className="tabular-nums font-bold text-cyan-300 whitespace-nowrap text-sm">
                             {t.ticketId}
                           </td>
                           <td>
-                            <div className="font-semibold text-white">{t.barangay}</div>
-                            <div className="text-xs text-slate-400">
+                            <div className="font-bold text-white text-sm">{t.barangay}</div>
+                            <div className="text-xs text-slate-300 font-medium">
                               {t.district} · {t.legislativeDistrict}
                             </div>
                           </td>
-                          <td>{t.requestType}</td>
+                          <td className="text-sm font-medium text-slate-200">{t.requestType}</td>
                           <td>
-                            <div className="font-semibold text-sky-200">{t.status}</div>
-                            <div className="text-[11px] text-slate-400 tabular-nums">
+                            <div className="font-bold text-sky-200 text-sm">{t.status}</div>
+                            <div className="text-xs text-slate-300 tabular-nums font-medium">
                               {age.label} {age.isAging && t.status !== 'Closed' ? '· Follow-up' : ''}
                             </div>
                           </td>
-                          <td className="max-w-[160px] truncate" title={t.actionTaken}>
+                          <td className="max-w-[180px] text-sm text-slate-200 truncate" title={t.actionTaken}>
                             {t.actionTaken}
                           </td>
-                          <td className="max-w-[160px] truncate" title={t.nextStep}>
+                          <td className="max-w-[180px] text-sm text-slate-200 truncate" title={t.nextStep}>
                             {t.nextStep}
                           </td>
                         </tr>
@@ -748,8 +867,8 @@ export default function SmartTrackerView({
             </div>
           </div>
 
-          {/* Right 5 Cols: Detailed Ticket Inspector, Explainable Next Step, Status Update & Audit Timeline */}
-          <div className={`${styles.glassPanel} lg:col-span-5 space-y-5`}>
+          {/* Right 5 Cols: Detailed Ticket Inspector with 3 Dedicated Tabs */}
+          <div className={`${styles.glassPanel} lg:col-span-5 space-y-4`}>
             {detailLoading && !ticketDetail ? (
               <div className="text-sm text-slate-300 py-8 text-center">
                 Loading ticket details...
@@ -759,7 +878,7 @@ export default function SmartTrackerView({
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-sky-400/20 pb-3">
                   <div>
                     <div className="text-xs font-mono text-cyan-400">
-                      SELECTED TICKET INSPECTOR • {ticketDetail.ticketId}
+                      TICKET DETAILS INSPECTOR • {ticketDetail.ticketId}
                     </div>
                     <h2 className="text-xl font-bold text-white mt-0.5">
                       {ticketDetail.barangay} — {ticketDetail.requestType}
@@ -777,6 +896,16 @@ export default function SmartTrackerView({
                       <span className="inline-flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5" /> View on Map
                       </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onOpenJourneyReplay && onOpenJourneyReplay(ticketDetail.ticketId)}
+                      className={styles.secondaryBtn}
+                      style={{ padding: '6px 10px', fontSize: '11px' }}
+                      title="Replay Request Journey (Timeline Replay)"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="hidden sm:inline">Replay</span>
                     </button>
                     <button
                       type="button"
@@ -799,187 +928,531 @@ export default function SmartTrackerView({
                   </div>
                 </div>
 
-                {/* Metadata Summary */}
-                <div className="grid grid-cols-2 gap-3 text-xs bg-slate-900/70 p-3.5 rounded-xl border border-sky-400/15">
-                  <div>
-                    <span className="text-slate-400">Current Status:</span>
-                    <div className="font-bold text-cyan-300 mt-0.5">{ticketDetail.status}</div>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Priority Level:</span>
-                    <div className="font-bold text-white mt-0.5">{ticketDetail.priority}</div>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Coordinating Official:</span>
-                    <div className="font-semibold text-white mt-0.5">
-                      {ticketDetail.requesterName} ({ticketDetail.requesterRole})
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Map Pin Status:</span>
-                    <div className="font-mono text-sky-200 mt-0.5 tabular-nums">
-                      {ticketDetail.latitude && ticketDetail.longitude
-                        ? `${Number(ticketDetail.latitude).toFixed(4)}, ${Number(
-                            ticketDetail.longitude
-                          ).toFixed(4)} (${ticketDetail.coordVerified ? 'Verified Demo Pin' : 'Unverified Pin'})`
-                        : 'Location not pinned'}
-                    </div>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-slate-400">Request Description:</span>
-                    <p className="text-slate-200 mt-0.5 leading-relaxed">
-                      {ticketDetail.description}
-                    </p>
-                  </div>
+                {/* Dedicated Ticket Details Inspector Tabs */}
+                <div
+                  role="tablist"
+                  aria-label="Ticket Details Tabs"
+                  className="grid grid-cols-3 gap-2 p-1.5 rounded-xl bg-slate-950/70 border border-sky-400/20"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={inspectorTab === 'overview'}
+                    onClick={() => setInspectorTab('overview')}
+                    className={`py-2 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                      inspectorTab === 'overview'
+                        ? 'bg-sky-500 text-slate-950 shadow'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Overview & Status</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={inspectorTab === 'audit'}
+                    onClick={() => setInspectorTab('audit')}
+                    className={`py-2 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                      inspectorTab === 'audit'
+                        ? 'bg-cyan-400 text-slate-950 shadow'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    <span>Audit Log ({ticketHistory.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={inspectorTab === 'edit'}
+                    onClick={() => setInspectorTab('edit')}
+                    className={`py-2 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                      inspectorTab === 'edit'
+                        ? 'bg-amber-400 text-slate-950 shadow'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Edit & Checklist</span>
+                  </button>
                 </div>
 
-                {/* Explainable Next-Step Suggestion Panel */}
-                {ticketDetail.explainableSuggestion && (
-                  <div className="p-3.5 rounded-xl bg-sky-950/55 border border-cyan-400/30 space-y-1.5">
-                    <div className="text-xs font-mono text-cyan-300 font-bold">
-                      EXPLAINABLE NEXT-STEP SUGGESTION (HUMAN DECISION REQUIRED)
+                {/* TAB 1: OVERVIEW & WORKFLOW STATUS TRANSITION */}
+                {inspectorTab === 'overview' && (
+                  <div className="space-y-4">
+                    {/* Metadata Summary */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-900/70 p-3.5 rounded-xl border border-sky-400/15">
+                      <div>
+                        <span className="text-slate-400">Current Status:</span>
+                        <div className="font-bold text-cyan-300 mt-0.5">{ticketDetail.status}</div>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Priority Level:</span>
+                        <div className="font-bold text-white mt-0.5">{ticketDetail.priority}</div>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Coordinating Official:</span>
+                        <div className="font-semibold text-white mt-0.5">
+                          {ticketDetail.requesterName} ({ticketDetail.requesterRole})
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">GPS Coordinates:</span>
+                        <div className="font-mono text-sky-200 mt-0.5 tabular-nums">
+                          {ticketDetail.latitude && ticketDetail.longitude
+                            ? `${Number(ticketDetail.latitude).toFixed(4)}, ${Number(
+                                ticketDetail.longitude
+                              ).toFixed(4)} (${ticketDetail.coordVerified ? 'Verified Pin' : 'Unverified Pin'})`
+                            : 'Location not pinned'}
+                        </div>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <span className="text-slate-400">Request Description:</span>
+                        <p className="text-slate-200 mt-0.5 leading-relaxed">
+                          {ticketDetail.description}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-xs text-white font-semibold">
-                      Recommended Target Status:{' '}
-                      <span className="text-cyan-300">
-                        {ticketDetail.explainableSuggestion.suggestedNextStatus}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-300">
-                      {ticketDetail.explainableSuggestion.rationale}
-                    </p>
+
+                    {/* Friendly Bilingual "What Should I Do Next?" Guidance Helper */}
+                    {ticketDetail && (() => {
+                      const filAdvice = getWhatShouldIDoNext(ticketDetail, 'fil');
+                      const enAdvice = getWhatShouldIDoNext(ticketDetail, 'en');
+                      return (
+                        <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-400/35 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono text-emerald-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                              💡 Gabay sa Aksyon • What Should I Do Next?
+                            </span>
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">
+                              {filAdvice.role}
+                            </span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-xs font-bold text-white flex items-baseline gap-1.5">
+                              <span className="text-emerald-400 font-bold">🇵🇭 Tagalog:</span> {filAdvice.action}
+                            </div>
+                            <p className="text-[11px] text-emerald-100/80 leading-relaxed pl-3 border-l-2 border-emerald-400/40">
+                              {filAdvice.detail}
+                            </p>
+                          </div>
+                          <div className="space-y-1 pt-1.5 border-t border-emerald-500/20">
+                            <div className="text-xs font-bold text-slate-200 flex items-baseline gap-1.5">
+                              <span className="text-sky-400 font-bold">🇺🇸 English:</span> {enAdvice.action}
+                            </div>
+                            <p className="text-[11px] text-slate-300 leading-relaxed pl-3 border-l-2 border-sky-400/40">
+                              {enAdvice.detail}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Explainable Next-Step Suggestion Panel */}
+                    {ticketDetail.explainableSuggestion && (
+                      <div className="p-3.5 rounded-xl bg-sky-950/55 border border-cyan-400/30 space-y-1.5">
+                        <div className="text-xs font-mono text-cyan-300 font-bold">
+                          EXPLAINABLE NEXT-STEP SUGGESTION (HUMAN DECISION REQUIRED)
+                        </div>
+                        <div className="text-xs text-white font-semibold">
+                          Recommended Target Status:{' '}
+                          <span className="text-cyan-300">
+                            {ticketDetail.explainableSuggestion.suggestedNextStatus}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300">
+                          {ticketDetail.explainableSuggestion.rationale}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Update Status Form */}
+                    <form
+                      onSubmit={handleStatusTransition}
+                      className="p-4 rounded-xl bg-slate-900/80 border border-sky-400/25 space-y-3"
+                    >
+                      <div className="text-xs font-mono text-cyan-300 font-bold">
+                        UPDATE WORKFLOW STATUS (ENFORCES ALLOWED TRANSITIONS)
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="next-status-select" className="block text-xs text-slate-300 mb-1">
+                            New Status
+                          </label>
+                          <select
+                            id="next-status-select"
+                            value={statusUpdateForm.newStatus}
+                            onChange={(e) =>
+                              setStatusUpdateForm((prev) => ({ ...prev, newStatus: e.target.value }))
+                            }
+                            className={styles.inputControl}
+                          >
+                            <option value={ticketDetail.status}>{ticketDetail.status} (Current)</option>
+                            {(ALLOWED_STATUS_TRANSITIONS[ticketDetail.status] || []).map((st) => (
+                              <option key={st} value={st}>
+                                {st}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor="actor-name-input" className="block text-xs text-slate-300 mb-1">
+                            Recorded By (Officer Name)
+                          </label>
+                          <input
+                            id="actor-name-input"
+                            type="text"
+                            value={statusUpdateForm.actorName}
+                            onChange={(e) =>
+                              setStatusUpdateForm((prev) => ({ ...prev, actorName: e.target.value }))
+                            }
+                            className={styles.inputControl}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="action-taken-input" className="block text-xs text-slate-300 mb-1">
+                          Action Taken
+                        </label>
+                        <input
+                          id="action-taken-input"
+                          type="text"
+                          value={statusUpdateForm.actionTaken}
+                          onChange={(e) =>
+                            setStatusUpdateForm((prev) => ({ ...prev, actionTaken: e.target.value }))
+                          }
+                          className={styles.inputControl}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="next-step-input" className="block text-xs text-slate-300 mb-1">
+                          Expected Next Step
+                        </label>
+                        <input
+                          id="next-step-input"
+                          type="text"
+                          value={statusUpdateForm.nextStep}
+                          onChange={(e) =>
+                            setStatusUpdateForm((prev) => ({ ...prev, nextStep: e.target.value }))
+                          }
+                          className={styles.inputControl}
+                        />
+                      </div>
+                      <button type="submit" className={styles.primaryActionBtn}>
+                        Record Status Update in Server Audit Trail
+                      </button>
+                    </form>
                   </div>
                 )}
 
-                {/* Field Inspection Checklist */}
-                <div className="space-y-2">
-                  <div className="text-xs font-mono text-sky-300 font-semibold">
-                    FIELD INSPECTION & COMPLETENESS CHECKLIST
-                  </div>
-                  <div className="space-y-1.5">
-                    {(ticketDetail.inspectionChecklist || []).map((item, idx) => (
-                      <label
-                        key={idx}
-                        className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-900/60 border border-sky-400/15 text-xs cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={Boolean(item.done)}
-                          onChange={() => handleToggleChecklistItem(idx)}
-                          className="rounded border-sky-400"
-                        />
-                        <span className={item.done ? 'line-through text-slate-400' : 'text-white'}>
-                          {item.item}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Update Status Form */}
-                <form
-                  onSubmit={handleStatusTransition}
-                  className="p-4 rounded-xl bg-slate-900/80 border border-sky-400/25 space-y-3"
-                >
-                  <div className="text-xs font-mono text-cyan-300 font-bold">
-                    UPDATE WORKFLOW STATUS (ENFORCES ALLOWED TRANSITIONS)
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="next-status-select" className="block text-xs text-slate-300 mb-1">
-                        New Status
-                      </label>
-                      <select
-                        id="next-status-select"
-                        value={statusUpdateForm.newStatus}
-                        onChange={(e) =>
-                          setStatusUpdateForm((prev) => ({ ...prev, newStatus: e.target.value }))
-                        }
-                        className={styles.inputControl}
-                      >
-                        <option value={ticketDetail.status}>{ticketDetail.status} (Current)</option>
-                        {(ALLOWED_STATUS_TRANSITIONS[ticketDetail.status] || []).map((st) => (
-                          <option key={st} value={st}>
-                            {st}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="actor-name-input" className="block text-xs text-slate-300 mb-1">
-                        Recorded By (Demo Role)
-                      </label>
-                      <input
-                        id="actor-name-input"
-                        type="text"
-                        value={statusUpdateForm.actorName}
-                        onChange={(e) =>
-                          setStatusUpdateForm((prev) => ({ ...prev, actorName: e.target.value }))
-                        }
-                        className={styles.inputControl}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="action-taken-input" className="block text-xs text-slate-300 mb-1">
-                      Action Taken
-                    </label>
-                    <input
-                      id="action-taken-input"
-                      type="text"
-                      value={statusUpdateForm.actionTaken}
-                      onChange={(e) =>
-                        setStatusUpdateForm((prev) => ({ ...prev, actionTaken: e.target.value }))
-                      }
-                      className={styles.inputControl}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="next-step-input" className="block text-xs text-slate-300 mb-1">
-                      Expected Next Step
-                    </label>
-                    <input
-                      id="next-step-input"
-                      type="text"
-                      value={statusUpdateForm.nextStep}
-                      onChange={(e) =>
-                        setStatusUpdateForm((prev) => ({ ...prev, nextStep: e.target.value }))
-                      }
-                      className={styles.inputControl}
-                    />
-                  </div>
-                  <button type="submit" className={styles.primaryActionBtn}>
-                    Record Status Update in Audit Trail
-                  </button>
-                </form>
-
-                {/* Chronological Activity History Timeline */}
-                <div className="space-y-2">
-                  <div className="text-xs font-mono text-sky-300 font-semibold">
-                    AUDIT & STATUS HISTORY TIMELINE ({ticketHistory.length} EVENTS)
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {ticketHistory.map((ev) => (
-                      <div
-                        key={ev.id}
-                        className="p-2.5 rounded-lg bg-slate-950/75 border border-sky-400/15 text-xs space-y-0.5"
-                      >
-                        <div className="flex items-center justify-between text-cyan-300 font-mono">
-                          <span>
-                            {ev.previousStatus} → {ev.newStatus}
-                          </span>
-                          <span className="tabular-nums text-slate-400">
-                            {new Date(ev.timestamp).toLocaleDateString()}
-                          </span>
+                {/* TAB 2: DEDICATED SERVER-SIDE AUDIT LOG & HISTORY TAB */}
+                {inspectorTab === 'audit' && (
+                  <div className="space-y-3" data-testid="ticket-audit-tab-panel">
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-900/80 p-3 rounded-xl border border-sky-400/20">
+                      <div>
+                        <div className="text-xs font-mono text-cyan-300 font-bold">
+                          SERVER-SIDE AUDIT TRAIL • {ticketDetail.ticketId}
                         </div>
-                        <div className="text-white font-medium">{ev.actionTaken}</div>
-                        <div className="text-slate-400">
-                          Actor: {ev.actorName} ({ev.actorRole})
+                        <div className="text-[11px] text-slate-400">
+                          Records all status transitions, field edits, coordinate updates & checklist changes
                         </div>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onOpenJourneyReplay && onOpenJourneyReplay(ticketDetail.ticketId)}
+                          className={styles.primaryActionBtn}
+                          style={{ padding: '6px 12px', fontSize: '11px' }}
+                          title="Launch Animated Journey Replay for this ticket"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" /> Replay Journey
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRefreshAuditLog}
+                          className={styles.secondaryBtn}
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" /> Sync Server Log
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Audit Event Filter & Sort Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <select
+                        aria-label="Filter Audit Events by Type"
+                        value={auditTypeFilter}
+                        onChange={(e) => setAuditTypeFilter(e.target.value)}
+                        className="bg-slate-900 border border-sky-400/30 rounded-lg px-2.5 py-1.5 text-white"
+                      >
+                        <option value="ALL">All Event Types ({ticketHistory.length})</option>
+                        <option value="STATUS_TRANSITION">Status Transitions</option>
+                        <option value="FIELD_EDIT">Field Edits</option>
+                        <option value="CHECKLIST_UPDATE">Checklist Updates</option>
+                        <option value="COORD_UPDATE">Coordinate Updates</option>
+                        <option value="TICKET_CREATED">Ticket Creation</option>
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAuditSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))
+                        }
+                        className={styles.secondaryBtn}
+                      >
+                        <ArrowUpDown className="w-3.5 h-3.5" />
+                        {auditSortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
+                      </button>
+                    </div>
+
+                    {/* Detailed Audit Timeline Entries */}
+                    <div className="space-y-2.5 max-h-[430px] overflow-y-auto pr-1">
+                      {filteredAuditHistory.length === 0 ? (
+                        <div className="p-6 text-center rounded-xl bg-slate-950/60 border border-sky-400/15 text-xs text-slate-400">
+                          No audit log events match the selected event filter.
+                        </div>
+                      ) : (
+                        filteredAuditHistory.map((ev) => {
+                          const evType = ev.eventType || 'STATUS_TRANSITION';
+                          const diffs = Array.isArray(ev.changedFields) ? ev.changedFields : [];
+                          const badgeColors = {
+                            STATUS_TRANSITION: 'bg-sky-500/20 text-sky-300 border-sky-400/40',
+                            FIELD_EDIT: 'bg-amber-500/20 text-amber-300 border-amber-400/40',
+                            CHECKLIST_UPDATE: 'bg-purple-500/20 text-purple-300 border-purple-400/40',
+                            COORD_UPDATE: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40',
+                            TICKET_CREATED: 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40',
+                          };
+                          return (
+                            <div
+                              key={ev.id}
+                              className="p-3.5 rounded-xl bg-slate-950/85 border border-sky-400/20 text-xs space-y-2"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span
+                                  className={`px-2 py-0.5 rounded border font-mono text-[10px] font-bold ${
+                                    badgeColors[evType] || badgeColors.STATUS_TRANSITION
+                                  }`}
+                                >
+                                  {evType}
+                                </span>
+                                <span className="tabular-nums font-mono text-slate-400">
+                                  {new Date(ev.timestamp).toLocaleString()}
+                                </span>
+                              </div>
+
+                              <div className="font-mono text-cyan-300 font-semibold">
+                                {ev.previousStatus
+                                  ? `${ev.previousStatus} → ${ev.newStatus}`
+                                  : `Initial Status: ${ev.newStatus}`}
+                              </div>
+
+                              <div className="text-white font-medium leading-relaxed">
+                                {ev.actionTaken}
+                              </div>
+
+                              {diffs.length > 0 && (
+                                <div className="space-y-1.5 pt-1 border-t border-slate-800">
+                                  <div className="text-[10px] font-mono uppercase text-slate-400">
+                                    Recorded Field-Level Changes ({diffs.length}):
+                                  </div>
+                                  {diffs.map((d, index) => (
+                                    <div
+                                      key={index}
+                                      className="p-2 rounded bg-slate-900/90 border border-slate-800 font-mono text-[11px] flex flex-wrap items-center gap-1.5"
+                                    >
+                                      <span className="text-sky-300 font-bold">{d.label || d.field}:</span>
+                                      <span className="text-rose-300 line-through">
+                                        {String(d.before || 'None')}
+                                      </span>
+                                      <span className="text-slate-400">→</span>
+                                      <span className="text-emerald-300 font-semibold">
+                                        {String(d.after || 'None')}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 pt-1">
+                                <span>
+                                  Actor: <strong className="text-slate-200">{ev.actorName}</strong> ({ev.actorRole})
+                                </span>
+                                <span className="font-mono">Audit ID #{ev.id}</span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* TAB 3: INLINE TICKET FIELD EDITOR & INSPECTION CHECKLIST */}
+                {inspectorTab === 'edit' && (
+                  <div className="space-y-4">
+                    {/* Field Inspection Checklist */}
+                    <div className="space-y-2 bg-slate-900/70 p-3.5 rounded-xl border border-sky-400/20">
+                      <div className="text-xs font-mono text-sky-300 font-semibold">
+                        FIELD INSPECTION & COMPLETENESS CHECKLIST
+                      </div>
+                      <div className="space-y-1.5">
+                        {(ticketDetail.inspectionChecklist || []).map((item, idx) => (
+                          <label
+                            key={idx}
+                            className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-950/70 border border-sky-400/15 text-xs cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={Boolean(item.done)}
+                              onChange={() => handleToggleChecklistItem(idx)}
+                              className="rounded border-sky-400"
+                            />
+                            <span className={item.done ? 'line-through text-slate-400' : 'text-white'}>
+                              {item.item}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Edit Ticket Details Form (triggers FIELD_EDIT in server-side audit log) */}
+                    <form
+                      onSubmit={handleSaveTicketEdits}
+                      className="p-4 rounded-xl bg-slate-900/80 border border-amber-400/30 space-y-3"
+                    >
+                      <div className="text-xs font-mono text-amber-300 font-bold">
+                        EDIT TICKET DETAILS (AUTOMATICALLY LOGS FIELD DIFF IN AUDIT TRAIL)
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="edit-barangay" className="block text-xs text-slate-300 mb-1">
+                            Barangay
+                          </label>
+                          <input
+                            id="edit-barangay"
+                            type="text"
+                            value={editForm.barangay}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({ ...prev, barangay: e.target.value }))
+                            }
+                            className={styles.inputControl}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="edit-priority" className="block text-xs text-slate-300 mb-1">
+                            Priority Level
+                          </label>
+                          <select
+                            id="edit-priority"
+                            value={editForm.priority}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({ ...prev, priority: e.target.value }))
+                            }
+                            className={styles.inputControl}
+                          >
+                            {PRIORITY_LEVELS.map((p) => (
+                              <option key={p} value={p}>
+                                {p}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="edit-street" className="block text-xs text-slate-300 mb-1">
+                            Street / Drainage Segment
+                          </label>
+                          <input
+                            id="edit-street"
+                            type="text"
+                            value={editForm.streetAddress}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({ ...prev, streetAddress: e.target.value }))
+                            }
+                            className={styles.inputControl}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="edit-req-type" className="block text-xs text-slate-300 mb-1">
+                            Request Type
+                          </label>
+                          <select
+                            id="edit-req-type"
+                            value={editForm.requestType}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({ ...prev, requestType: e.target.value }))
+                            }
+                            className={styles.inputControl}
+                          >
+                            {REQUEST_TYPES.map((rt) => (
+                              <option key={rt} value={rt}>
+                                {rt}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="edit-requester" className="block text-xs text-slate-300 mb-1">
+                            Coordinating Official
+                          </label>
+                          <input
+                            id="edit-requester"
+                            type="text"
+                            value={editForm.requesterName}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({ ...prev, requesterName: e.target.value }))
+                            }
+                            className={styles.inputControl}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="edit-actor" className="block text-xs text-slate-300 mb-1">
+                            Edited By (Auditor / Engineer)
+                          </label>
+                          <input
+                            id="edit-actor"
+                            type="text"
+                            value={editForm.actorName}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({ ...prev, actorName: e.target.value }))
+                            }
+                            className={styles.inputControl}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="edit-description" className="block text-xs text-slate-300 mb-1">
+                          Engineering Description & Field Notes
+                        </label>
+                        <textarea
+                          id="edit-description"
+                          rows={2}
+                          value={editForm.description}
+                          onChange={(e) =>
+                            setEditForm((prev) => ({ ...prev, description: e.target.value }))
+                          }
+                          className={styles.inputControl}
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={editSaving}
+                        className={styles.orangeActionBtn}
+                      >
+                        {editSaving ? 'Recording Edits...' : 'Save Changes & Log Field Edit'}
+                      </button>
+                    </form>
+                  </div>
+                )}
               </>
             ) : (
               <div className="text-sm text-slate-300 py-8 text-center">
@@ -1054,7 +1527,7 @@ export default function SmartTrackerView({
           <div className={`${styles.glassPanel} lg:col-span-7 space-y-4`}>
             <div>
               <div className="text-xs font-mono text-cyan-400">
-                COORDINATION SCHEDULE • PROPOSED VS CONFIRMED DEMO EVENTS
+                COORDINATION SCHEDULE • PROPOSED VS CONFIRMED OPERATIONS
               </div>
               <h2 className="text-xl font-bold text-white">
                 Inspection & Field Operations Calendar
@@ -1088,7 +1561,7 @@ export default function SmartTrackerView({
               className="p-4 rounded-xl bg-slate-950/75 border border-sky-400/20 space-y-3"
             >
               <div className="text-xs font-mono text-sky-300 font-bold">
-                + PROPOSE COORDINATION SCHEDULE (TRAINING DEMO)
+                + PROPOSE COORDINATION SCHEDULE
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <select
@@ -1128,7 +1601,7 @@ export default function SmartTrackerView({
                   <option value="Proposed (Awaiting Confirmation)">
                     Proposed (Awaiting Confirmation)
                   </option>
-                  <option value="Confirmed Demo Schedule">Confirmed Demo Schedule</option>
+                  <option value="Confirmed Field Schedule">Confirmed Field Schedule</option>
                 </select>
               </div>
               <input
@@ -1137,7 +1610,7 @@ export default function SmartTrackerView({
                 onChange={(e) =>
                   setNewScheduleForm((prev) => ({ ...prev, title: e.target.value }))
                 }
-                placeholder="Schedule activity title (e.g., Joint Ocular Inspection at Sample Street)"
+                placeholder="Schedule activity title (e.g., Joint Ocular Inspection at España Blvd)"
                 className={styles.inputControl}
               />
               <button type="submit" className={styles.primaryActionBtn}>
@@ -1149,7 +1622,7 @@ export default function SmartTrackerView({
           <div className={`${styles.glassPanel} lg:col-span-5 space-y-4`}>
             <div>
               <div className="text-xs font-mono text-cyan-400">
-                VERIFIED DRAINAGE ASSET REGISTRY (DEMO)
+                VERIFIED DRAINAGE ASSET REGISTRY
               </div>
               <h2 className="text-xl font-bold text-white">
                 Manila Drainage Infrastructure Profiles
@@ -1220,7 +1693,7 @@ export default function SmartTrackerView({
 
           <div className={`${styles.glassPanel} space-y-4`}>
             <div className="text-xs font-mono text-amber-300">
-              DATA-QUALITY & PRIVACY RETENTION AUDIT
+              DATA-QUALITY & COMPLETENESS AUDIT
             </div>
             <h2 className="text-xl font-bold text-white">
               Records Needing Location Verification or Clarification
@@ -1238,7 +1711,7 @@ export default function SmartTrackerView({
                         {t.ticketId} — {t.barangay}
                       </div>
                       <div className="text-slate-300">
-                        {t.coordVerified ? 'Verified Demo Coordinates' : 'Unverified Pin / Review Needed'} ·{' '}
+                        {t.coordVerified ? 'Verified Street Coordinates' : 'Unverified Pin / Review Needed'} ·{' '}
                         {t.status}
                       </div>
                     </div>
@@ -1265,7 +1738,7 @@ export default function SmartTrackerView({
             <div className="flex items-center justify-between border-b border-sky-400/20 pb-3">
               <div>
                 <div className="text-xs font-mono text-cyan-400">
-                  SMART TRACKER INTAKE • FICTIONAL DEMONSTRATION ENTRY
+                  SMART TRACKER INTAKE • BARANGAY DECLOGGING REGISTRATION
                 </div>
                 <h2 id="create-ticket-title" className="text-xl font-bold text-white">
                   Log New Barangay Declogging Request
@@ -1323,7 +1796,7 @@ export default function SmartTrackerView({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label htmlFor="create-brgy" className="block text-xs text-slate-300 mb-1">
-                    Sample Barangay Name *
+                    Barangay Name *
                   </label>
                   <input
                     id="create-brgy"
@@ -1381,7 +1854,7 @@ export default function SmartTrackerView({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
                   <label htmlFor="create-street" className="block text-xs text-slate-300 mb-1">
-                    Fictional Street / Drainage Segment *
+                    Street / Drainage Segment *
                   </label>
                   <input
                     id="create-street"
@@ -1421,7 +1894,7 @@ export default function SmartTrackerView({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label htmlFor="create-requester" className="block text-xs text-slate-300 mb-1">
-                    Coordinating Official (Dummy Name) *
+                    Coordinating Official *
                   </label>
                   <input
                     id="create-requester"
@@ -1457,7 +1930,7 @@ export default function SmartTrackerView({
                 </div>
                 <div>
                   <label htmlFor="create-coords" className="block text-xs text-slate-300 mb-1">
-                    Demo Coordinates (Lat, Lng)
+                    GPS Coordinates (Lat, Lng)
                   </label>
                   <input
                     id="create-coords"
@@ -1520,7 +1993,7 @@ export default function SmartTrackerView({
               Confirm Delete Ticket {confirmDeleteTicketId}?
             </h3>
             <p className="text-sm text-slate-300">
-              This will permanently remove demonstration ticket{' '}
+              This will permanently remove ticket{' '}
               <strong className="text-cyan-300">{confirmDeleteTicketId}</strong> and its audit history from the SQLite database.
             </p>
             <div className="flex justify-end gap-3">

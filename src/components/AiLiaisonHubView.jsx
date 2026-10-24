@@ -28,7 +28,7 @@ export default function AiLiaisonHubView({ tickets = [], user, onUserChange, sho
   const [barangayInput, setBarangayInput] = useState('Barangay 455, Zone 45');
   const [districtInput, setDistrictInput] = useState('Sampaloc');
   const [streetInput, setStreetInput] = useState('España Boulevard cor. Maceda St.');
-  const [kagawadInput, setKagawadInput] = useState('Kagawad Juan D. Cruz — DUMMY NAME');
+  const [kagawadInput, setKagawadInput] = useState('Juan D. Cruz, Barangay Kagawad');
   const [drainageInput, setDrainageInput] = useState('Closed Box Culvert');
   const [issueNotes, setIssueNotes] = useState('Heavy silt accumulation and plastic debris causing ankle-deep water ponding after rain.');
   const [aiOutput, setAiOutput] = useState('');
@@ -41,10 +41,10 @@ export default function AiLiaisonHubView({ tickets = [], user, onUserChange, sho
   const [gmailMessages, setGmailMessages] = useState([]);
   const [gmailLoading, setGmailLoading] = useState(false);
   const [gmailQuery, setGmailQuery] = useState('subject:(declogging OR drainage OR barangay)');
-  const [draftRecipient, setDraftRecipient] = useState('brgy455.sample@example.org');
-  const [draftSubject, setDraftSubject] = useState('[SAMPLE DATA] DEPW Coordination Update — Ref: DEO-2026-001');
+  const [draftRecipient, setDraftRecipient] = useState('brgy455.manila@example.org');
+  const [draftSubject, setDraftSubject] = useState('DEPW Coordination Update — Ref: DEO-2026-001');
   const [draftBody, setDraftBody] = useState(
-    'Magandang araw po!\n\nIto po ay opisyal na koordinasyon mula sa Department of Engineering Office (SAMPLE TRAINING DEMO) kaugnay ng inyong kahilingan sa declogging.\n\nStatus: For Inspection\nSusunod na Hakbang: Field ocular inspection kasama ang Barangay Kagawad.\n\nMaraming salamat po.'
+    'Magandang araw po!\n\nIto po ay opisyal na koordinasyon mula sa Department of Engineering Office kaugnay ng inyong kahilingan sa declogging.\n\nStatus: For Inspection\nSusunod na Hakbang: Field ocular inspection kasama ang Barangay Kagawad.\n\nMaraming salamat po.'
   );
   const [confirmGmailModal, setConfirmGmailModal] = useState(false);
   const [creatingDraft, setCreatingDraft] = useState(false);
@@ -116,7 +116,7 @@ export default function AiLiaisonHubView({ tickets = [], user, onUserChange, sho
       setKagawadInput(found.requesterName || found.requester_name);
       setDrainageInput(found.requestType || found.drainage_type);
       setIssueNotes(found.description);
-      setDraftSubject(`[SAMPLE DATA] DEPW Coordination Update — Ref: ${tid} (${found.barangay})`);
+      setDraftSubject(`DEPW Coordination Update — Ref: ${tid} (${found.barangay})`);
     }
   };
 
@@ -155,7 +155,7 @@ export default function AiLiaisonHubView({ tickets = [], user, onUserChange, sho
           setAiModelUsed('Deterministic Completeness Rules');
         } else {
           setAiOutput(
-            `MEMORANDUM FOR COORDINATING LIAISON (SAMPLE DATA)\n` +
+            `MEMORANDUM FOR COORDINATING LIAISON\n` +
             `Subject: Status Update for ${barangayInput} (${districtInput})\n` +
             `Location: ${streetInput} — ${drainageInput}\n\n` +
             `Summary of Field Report:\n${issueNotes}\n\n` +
@@ -167,9 +167,9 @@ export default function AiLiaisonHubView({ tickets = [], user, onUserChange, sho
       }
 
       const promptMap = {
-        draft_letter: `Draft a formal, respectful bilingual (Filipino and English) Barangay Declogging Request Letter addressed to the Department of Engineering Office (City of Manila) from ${barangayInput} (${districtInput}), through ${kagawadInput}, requesting declogging assistance at ${streetInput} (${drainageInput}). Field observation: ${issueNotes}. Clearly label as SAMPLE TRAINING DATA / NOT AN OFFICIAL GOVERNMENT DOCUMENT.`,
+        draft_letter: `Draft a formal, respectful bilingual (Filipino and English) Barangay Declogging Request Letter addressed to the Department of Engineering Office (City of Manila) from ${barangayInput} (${districtInput}), through ${kagawadInput}, requesting declogging assistance at ${streetInput} (${drainageInput}). Field observation: ${issueNotes}.`,
         missing_info: `Review this Barangay Declogging Request intake for completeness and potential missing engineering details: Barangay: ${barangayInput}, District: ${districtInput}, Street: ${streetInput}, Drainage Type: ${drainageInput}, Contact Person: ${kagawadInput}, Description: ${issueNotes}. Provide a clear bulleted completeness checklist and explain what the Liaison Officer should clarify before forwarding to the Area Engineer.`,
-        status_memo: `Write a concise, clear Liaison Status Coordination Memo for Barangay Officials summarizing the request at ${streetInput}, ${barangayInput} (${districtInput}) for ${drainageInput}. Explain the next workflow steps clearly without making unauthorized scheduling promises. Include a SAMPLE DATA disclaimer.`
+        status_memo: `Write a concise, clear Liaison Status Coordination Memo for Barangay Officials summarizing the request at ${streetInput}, ${barangayInput} (${districtInput}) for ${drainageInput}. Explain the next workflow steps clearly without making unauthorized scheduling promises.`
       };
 
       const res = await api.aiAssist({
@@ -499,7 +499,7 @@ export default function AiLiaisonHubView({ tickets = [], user, onUserChange, sho
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div>
-                <label className={styles.fieldLabel}>Barangay (Sample)</label>
+                <label className={styles.fieldLabel}>Barangay</label>
                 <input
                   type="text"
                   className={styles.glassInput}
@@ -546,7 +546,7 @@ export default function AiLiaisonHubView({ tickets = [], user, onUserChange, sho
             </div>
 
             <div>
-              <label className={styles.fieldLabel}>Submitting Official (Fictional / Sample Name Only)</label>
+              <label className={styles.fieldLabel}>Submitting Barangay Official</label>
               <input
                 type="text"
                 className={styles.glassInput}

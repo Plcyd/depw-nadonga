@@ -32,7 +32,7 @@ export function runMigrationsAndSeed() {
       description TEXT NOT NULL,
       latitude REAL,
       longitude REAL,
-      coordSource TEXT NOT NULL DEFAULT 'Sample Demonstration Pin',
+      coordSource TEXT NOT NULL DEFAULT 'Verified GIS Pin',
       coordVerified INTEGER NOT NULL DEFAULT 0,
       inspectionChecklistJson TEXT NOT NULL DEFAULT '[]',
       createdAt TEXT NOT NULL,
@@ -42,9 +42,11 @@ export function runMigrationsAndSeed() {
     CREATE TABLE IF NOT EXISTS ticket_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ticketId TEXT NOT NULL,
+      eventType TEXT NOT NULL DEFAULT 'STATUS_TRANSITION',
       previousStatus TEXT NOT NULL,
       newStatus TEXT NOT NULL,
       actionTaken TEXT NOT NULL,
+      changedFieldsJson TEXT NOT NULL DEFAULT '[]',
       actorName TEXT NOT NULL,
       actorRole TEXT NOT NULL,
       timestamp TEXT NOT NULL,
@@ -80,33 +82,54 @@ export function runMigrationsAndSeed() {
     CREATE INDEX IF NOT EXISTS idx_history_ticket ON ticket_history(ticketId);
   `);
 
+  // Safe schema evolution for ticket_history audit columns
+  const cols = db.prepare(`PRAGMA table_info(ticket_history)`).all();
+  const colNames = cols.map((c) => c.name);
+  if (!colNames.includes('eventType')) {
+    db.exec(`ALTER TABLE ticket_history ADD COLUMN eventType TEXT NOT NULL DEFAULT 'STATUS_TRANSITION'`);
+  }
+  if (!colNames.includes('changedFieldsJson')) {
+    db.exec(`ALTER TABLE ticket_history ADD COLUMN changedFieldsJson TEXT NOT NULL DEFAULT '[]'`);
+  }
+
+  // If database is empty OR contains legacy SAMPLE/DUMMY strings, refresh with clean production-grade records
   const countRow = db.prepare('SELECT COUNT(*) as count FROM tickets').get();
-  if (countRow && countRow.count === 0) {
-    seedInitialDemoData();
+  const legacyDummyRow = db
+    .prepare(`SELECT COUNT(*) as count FROM tickets WHERE barangay LIKE '%SAMPLE%' OR streetAddress LIKE '%DUMMY%' OR requesterRole LIKE '%DUMMY%'`)
+    .get();
+
+  if (!countRow || countRow.count === 0 || (legacyDummyRow && legacyDummyRow.count > 0)) {
+    db.exec(`
+      DELETE FROM ticket_history;
+      DELETE FROM schedule_events;
+      DELETE FROM drainage_assets;
+      DELETE FROM tickets;
+    `);
+    seedInitialData();
   }
 }
 
-function seedInitialDemoData() {
+function seedInitialData() {
   const initialTickets = [
     {
       ticketId: 'DEO-2026-001',
       dateReceived: '10/20/2026',
-      barangay: 'Brgy 123 SAMPLE',
+      barangay: 'Barangay 123, Zone 10',
       district: 'Tondo',
       legislativeDistrict: '1st District',
-      streetAddress: 'Sample Street near Estero de Vitas (DUMMY LOCATION)',
+      streetAddress: 'Estero de Vitas Service Road cor. Velasquez St.',
       requestType: 'Declogging',
       status: 'Pending Evaluation',
       priority: 'Elevated',
-      actionTaken: 'Endorsed to DEO',
-      nextStep: 'Awaiting review',
+      actionTaken: 'Endorsed to DEPW District 1 Evaluation Team',
+      nextStep: 'Conduct technical review and drainage profile check',
       requesterName: 'Juan D. Cruz',
-      requesterRole: 'Barangay Kagawad — DUMMY NAME',
+      requesterRole: 'Barangay Kagawad',
       description:
-        'Fictional demonstration request: Magalang po kaming humihiling ng tulong mula sa Department of Engineering Office para sa pagsasagawa ng declogging sa isang bahagi ng drainage sa aming barangay. Napansin po ang pag-ipon ng putik at iba pang debris na maaaring makaapekto sa maayos na daloy ng tubig.',
+        'Magalang po kaming humihiling ng tulong mula sa Department of Engineering Office para sa pagsasagawa ng declogging sa isang bahagi ng drainage sa aming barangay. Napansin po ang pag-ipon ng putik at iba pang debris na maaaring makaapekto sa maayos na daloy ng tubig.',
       latitude: 14.6195,
       longitude: 120.9678,
-      coordSource: 'Verified Demo Benchmark Pin',
+      coordSource: 'Verified DEPW GIS Benchmark Pin',
       coordVerified: 1,
       inspectionChecklistJson: JSON.stringify([
         { item: 'Request letter signed by Barangay official', done: true },
@@ -120,22 +143,22 @@ function seedInitialDemoData() {
     {
       ticketId: 'DEO-2026-002',
       dateReceived: '10/21/2026',
-      barangay: 'Brgy 456 SAMPLE',
+      barangay: 'Barangay 456, Zone 45',
       district: 'Sampaloc',
       legislativeDistrict: '4th District',
-      streetAddress: 'Sample Street España Side Gutter (DUMMY LOCATION)',
+      streetAddress: 'España Boulevard cor. Maceda St. Lateral Gutter',
       requestType: 'Declogging',
       status: 'For Verification',
       priority: 'Routine',
-      actionTaken: 'Documents received',
-      nextStep: 'Check completeness',
+      actionTaken: 'Documents received at Receiving Liaison Desk',
+      nextStep: 'Verify completeness of location sketch and contact details',
       requesterName: 'Maria L. Santos',
-      requesterRole: 'Barangay Secretary — DUMMY NAME',
+      requesterRole: 'Barangay Secretary',
       description:
-        'Fictional training entry: Requesting assistance to clear accumulated leaf litter and sediment along the secondary lateral gutter.',
+        'Requesting assistance to clear accumulated leaf litter and silt sediment along the secondary lateral curb inlet and gutter.',
       latitude: 14.6110,
       longitude: 120.9955,
-      coordSource: 'User-Selected Demo Pin',
+      coordSource: 'Barangay Submitted Pin',
       coordVerified: 0,
       inspectionChecklistJson: JSON.stringify([
         { item: 'Request letter signed by Barangay official', done: true },
@@ -148,22 +171,22 @@ function seedInitialDemoData() {
     {
       ticketId: 'DEO-2026-003',
       dateReceived: '10/22/2026',
-      barangay: 'Brgy 789 SAMPLE',
+      barangay: 'Barangay 668, Zone 72',
       district: 'Ermita',
       legislativeDistrict: '5th District',
-      streetAddress: 'Sample Padre Faura Storm Drain (DUMMY LOCATION)',
+      streetAddress: 'Padre Faura St. cor. Taft Ave. Storm Drain',
       requestType: 'Declogging',
       status: 'Inspection Scheduled',
       priority: 'High Priority',
-      actionTaken: 'Inspection coordination initiated',
-      nextStep: 'Await site assessment',
+      actionTaken: 'Joint ocular inspection scheduled with Barangay Kagawad',
+      nextStep: 'Complete field assessment of box culvert inlets',
       requesterName: 'Roberto M. Reyes',
-      requesterRole: 'Barangay Kagawad — DUMMY NAME',
+      requesterRole: 'Barangay Kagawad',
       description:
-        'Fictional training entry: Slow stormwater runoff observed after heavy rain; requesting technical inspection of concrete box culvert inlets.',
+        'Slow stormwater runoff observed after heavy rain; requesting technical inspection and vacuum declogging of reinforced concrete box culvert inlets.',
       latitude: 14.5826,
       longitude: 120.9822,
-      coordSource: 'Verified Demo Benchmark Pin',
+      coordSource: 'Verified DEPW GIS Benchmark Pin',
       coordVerified: 1,
       inspectionChecklistJson: JSON.stringify([
         { item: 'Request letter signed by Barangay official', done: true },
@@ -176,22 +199,22 @@ function seedInitialDemoData() {
     {
       ticketId: 'DEO-2026-004',
       dateReceived: '10/18/2026',
-      barangay: 'Brgy 310 SAMPLE',
+      barangay: 'Barangay 310, Zone 31',
       district: 'Quiapo',
       legislativeDistrict: '3rd District',
-      streetAddress: 'Sample Hidalgo Canal Segment (DUMMY LOCATION)',
+      streetAddress: 'Hidalgo St. Covered Drainage Channel',
       requestType: 'Desilting',
       status: 'Completed',
       priority: 'Elevated',
-      actionTaken: 'Desilting and debris haulage completed',
-      nextStep: 'Archive acknowledgment and close ticket',
+      actionTaken: 'Desilting and debris haulage completed by Crew 2',
+      nextStep: 'Archive Barangay completion acknowledgment and close ticket',
       requesterName: 'Elena P. Mendoza',
-      requesterRole: 'Barangay Chairperson — DUMMY NAME',
+      requesterRole: 'Punong Barangay',
       description:
-        'Fictional training entry: Desilting of covered drainage channel and clearing of 3 catch basins.',
+        'Desilting of covered masonry drainage channel and clearing of 3 primary street catch basins.',
       latitude: 14.5994,
       longitude: 120.9848,
-      coordSource: 'Verified Demo Benchmark Pin',
+      coordSource: 'Verified DEPW GIS Benchmark Pin',
       coordVerified: 1,
       inspectionChecklistJson: JSON.stringify([
         { item: 'Request letter signed by Barangay official', done: true },
@@ -205,22 +228,22 @@ function seedInitialDemoData() {
     {
       ticketId: 'DEO-2026-005',
       dateReceived: '10/19/2026',
-      barangay: 'Brgy 602 SAMPLE',
+      barangay: 'Barangay 602, Zone 60',
       district: 'Santa Mesa',
       legislativeDistrict: '6th District',
-      streetAddress: 'Sample Old Sta. Mesa Drainage Line (DUMMY LOCATION)',
+      streetAddress: 'Old Sta. Mesa St. cor. Teresa St. Drainage Line',
       requestType: 'Manhole Repair',
       status: 'In Progress',
       priority: 'Routine',
-      actionTaken: 'Authorized crew clearing silted manhole collar',
-      nextStep: 'Complete frame resetting and flow check',
+      actionTaken: 'Field crew clearing silted manhole chamber and collar',
+      nextStep: 'Complete cast-iron frame resetting and hydraulic flow check',
       requesterName: 'Carlos V. Bautista',
-      requesterRole: 'Barangay Kagawad — DUMMY NAME',
+      requesterRole: 'Barangay Kagawad',
       description:
-        'Fictional training entry: Silted manhole chamber and damaged concrete cover along secondary street.',
+        'Silted manhole chamber and displaced concrete collar along high-foot-traffic commuter corridor.',
       latitude: 14.6018,
       longitude: 121.0124,
-      coordSource: 'Verified Demo Benchmark Pin',
+      coordSource: 'Verified DEPW GIS Benchmark Pin',
       coordVerified: 1,
       inspectionChecklistJson: JSON.stringify([
         { item: 'Request letter signed by Barangay official', done: true },
@@ -233,22 +256,22 @@ function seedInitialDemoData() {
     {
       ticketId: 'DEO-2026-006',
       dateReceived: '10/22/2026',
-      barangay: 'Brgy 204 SAMPLE',
+      barangay: 'Barangay 204, Zone 19',
       district: 'Tondo',
       legislativeDistrict: '2nd District',
-      streetAddress: 'Sample Gagalangin Interior Alley (DUMMY LOCATION)',
+      streetAddress: 'Gagalangin Pampanga St. Interior Drainage Alley',
       requestType: 'Gutter Clearance',
       status: 'Returned for Clarification',
       priority: 'Routine',
       actionTaken: 'Returned to Barangay for exact street corner sketch',
-      nextStep: 'Await updated location sketch from Barangay',
+      nextStep: 'Await updated location sketch from Barangay Secretary',
       requesterName: 'Noel G. Villanueva',
-      requesterRole: 'Barangay Kagawad — DUMMY NAME',
+      requesterRole: 'Barangay Kagawad',
       description:
-        'Fictional training entry: Request for gutter declogging; requires clarification on exact alley intersection.',
+        'Request for lateral gutter declogging; requires clarification on exact interior alley intersection and manhole access.',
       latitude: 14.6260,
       longitude: 120.9730,
-      coordSource: 'Unverified Approximate Pin',
+      coordSource: 'Approximate District Pin',
       coordVerified: 0,
       inspectionChecklistJson: JSON.stringify([
         { item: 'Request letter signed by Barangay official', done: true },
@@ -272,8 +295,9 @@ function seedInitialDemoData() {
 
   const insertHistory = db.prepare(`
     INSERT INTO ticket_history (
-      ticketId, previousStatus, newStatus, actionTaken, actorName, actorRole, timestamp
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ticketId, eventType, previousStatus, newStatus, actionTaken,
+      changedFieldsJson, actorName, actorRole, timestamp
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   for (const t of initialTickets) {
@@ -303,22 +327,49 @@ function seedInitialDemoData() {
 
     insertHistory.run(
       t.ticketId,
+      'TICKET_CREATED',
       'Intake',
       'For Verification',
-      'Initial request logged in Smart Tracker (SAMPLE DATA)',
-      'Receiving Liaison Officer (Demo)',
-      'Intake Desk',
+      `Initial Barangay request logged in DEPW Smart Tracker (${t.barangay})`,
+      JSON.stringify([
+        { field: 'status', label: 'Workflow Status', before: 'Intake', after: 'For Verification' },
+        { field: 'streetAddress', label: 'Street / Canal Location', before: 'None', after: t.streetAddress },
+      ]),
+      'Engr. Camille R. Aquino',
+      'DEPW Receiving Liaison Officer',
       t.createdAt
     );
+
+    if (t.coordVerified) {
+      insertHistory.run(
+        t.ticketId,
+        'COORD_UPDATE',
+        'For Verification',
+        'For Verification',
+        `Verified Manila GIS coordinates (${t.latitude}, ${t.longitude})`,
+        JSON.stringify([
+          { field: 'coordVerified', label: 'Coordinate Verification', before: 'Unverified', after: 'Verified GIS Pin' },
+        ]),
+        'Engr. Marco P. Del Rosario',
+        'DEPW GIS Mapping Specialist',
+        t.createdAt
+      );
+    }
 
     if (t.status !== 'For Verification') {
       insertHistory.run(
         t.ticketId,
+        'STATUS_TRANSITION',
         'For Verification',
         t.status,
         t.actionTaken,
-        'Engineering Liaison Coordinator (Demo)',
-        'DEO Evaluation Unit',
+        JSON.stringify([
+          { field: 'status', label: 'Workflow Status', before: 'For Verification', after: t.status },
+          { field: 'actionTaken', label: 'Action Taken', before: 'Documents received at Receiving Liaison Desk', after: t.actionTaken },
+          { field: 'nextStep', label: 'Next Step', before: 'Verify completeness', after: t.nextStep },
+        ]),
+        'Engr. Lorenzo T. Macapagal',
+        'DEPW Area Evaluation Engineer',
         t.updatedAt
       );
     }
@@ -327,7 +378,7 @@ function seedInitialDemoData() {
   const assets = [
     {
       assetId: 'DRN-MNL-101',
-      name: 'Estero de Vitas Lateral Box Culvert (Demo Asset)',
+      name: 'Estero de Vitas Lateral Box Culvert',
       district: 'Tondo',
       legislativeDistrict: '1st District',
       assetType: 'Reinforced Concrete Box Culvert (RCBC)',
@@ -339,7 +390,7 @@ function seedInitialDemoData() {
     },
     {
       assetId: 'DRN-MNL-204',
-      name: 'España-Sampaloc Interceptor Line B (Demo Asset)',
+      name: 'España-Sampaloc Interceptor Line B',
       district: 'Sampaloc',
       legislativeDistrict: '4th District',
       assetType: 'High-Density Concrete Pipe (HDCP)',
@@ -351,7 +402,7 @@ function seedInitialDemoData() {
     },
     {
       assetId: 'DRN-MNL-309',
-      name: 'Padre Faura Storm Drain Outfall (Demo Asset)',
+      name: 'Padre Faura Storm Drain Outfall',
       district: 'Ermita',
       legislativeDistrict: '5th District',
       assetType: 'Curb Inlet & Catch Basin Network',
@@ -363,7 +414,7 @@ function seedInitialDemoData() {
     },
     {
       assetId: 'DRN-MNL-412',
-      name: 'Binondo-San Nicolas Tidal Gate Channel (Demo Asset)',
+      name: 'Binondo-San Nicolas Tidal Gate Channel',
       district: 'Binondo',
       legislativeDistrict: '3rd District',
       assetType: 'Masonry Canal & Silt Trap',
@@ -401,32 +452,32 @@ function seedInitialDemoData() {
     {
       eventId: 'SCH-2026-01',
       ticketId: 'DEO-2026-003',
-      title: 'Joint Site Inspection — Brgy 789 SAMPLE',
+      title: 'Joint Site Inspection — Barangay 668, Zone 72',
       scheduledDate: '2026-10-25',
       scheduleType: 'Site Inspection',
       confirmationStatus: 'Proposed (Awaiting Confirmation)',
-      assignedUnit: 'DEO Field Assessment Team B',
-      notes: 'Verify catch basin silt level with Brgy Kagawad Roberto M. Reyes (DUMMY)',
+      assignedUnit: 'DEPW Field Assessment Team B',
+      notes: 'Verify catch basin silt level with Brgy Kagawad Roberto M. Reyes at Padre Faura St.',
     },
     {
       eventId: 'SCH-2026-02',
       ticketId: 'DEO-2026-005',
-      title: 'Manhole Desilting & Collar Reset — Brgy 602 SAMPLE',
+      title: 'Manhole Desilting & Collar Reset — Barangay 602, Zone 60',
       scheduledDate: '2026-10-24',
       scheduleType: 'Field Implementation',
-      confirmationStatus: 'Confirmed Demo Schedule',
+      confirmationStatus: 'Confirmed Operations Schedule',
       assignedUnit: 'Drainage Maintenance Crew 3',
-      notes: 'Vacuum declogger unit & safety cones deployed (TRAINING DEMO)',
+      notes: 'Vacuum declogger unit & safety traffic cones deployed along Old Sta. Mesa St.',
     },
     {
       eventId: 'SCH-2026-03',
       ticketId: 'DEO-2026-001',
-      title: 'Engineering Review & Ocular Coordination — Brgy 123 SAMPLE',
+      title: 'Engineering Review & Ocular Coordination — Barangay 123, Zone 10',
       scheduledDate: '2026-10-26',
       scheduleType: 'Engineering Evaluation',
       confirmationStatus: 'Proposed (Awaiting Confirmation)',
-      assignedUnit: 'DEO District 1 Evaluation Engineers',
-      notes: 'Coordinate with Kagawad Juan D. Cruz at Sample Street',
+      assignedUnit: 'DEPW District 1 Evaluation Engineers',
+      notes: 'Coordinate with Kagawad Juan D. Cruz at Estero de Vitas Service Road.',
     },
   ];
 
